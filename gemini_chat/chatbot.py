@@ -4,7 +4,7 @@ from google.genai import types
 
 def run_chatbot():
     client = genai.Client()
-    MODEL_ID = "gemini-2.5-flash"
+    MODEL_ID = "gemini-2.0-flash"
 
     # 1. Fetch uploaded files
     print("Fetching active uploaded files...")
@@ -41,12 +41,11 @@ def run_chatbot():
     files = list(filtered_files.values())
 
     if not files:
-        print("No suitable active files found. Please run fileAPI_uploader.py first.")
-        return
-
-    print(f"Context optimized: Using {len(files)} files (Ignored/Deduplicated {ignored_count} files).")
-    for f in files:
-        print(f" - {f.display_name}")
+        print("No suitable active files found. Running without additional context.")
+    else:
+        print(f"Context optimized: Using {len(files)} files (Ignored/Deduplicated {ignored_count} files).")
+        for f in files:
+            print(f" - {f.display_name}")
 
     # 3. Initialize chat session with files as context
     # Note: We provide the files in the history or as initial context parts.
@@ -80,6 +79,8 @@ def run_chatbot():
             print(f"\nGemini: {response.text}\n")
         except Exception as e:
             print(f"Error during chat: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     run_chatbot()

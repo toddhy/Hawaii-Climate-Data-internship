@@ -21,24 +21,41 @@ def main():
     path_to_search = args.path
     print(f"Uploading files from {path_to_search}...")
 
-    # Searching for .txt files
+    # Searching for files
     search_path = pathlib.Path(path_to_search)
     if not search_path.exists():
         print(f"Error: Path {path_to_search} does not exist.")
         return
 
-    for p in search_path.rglob('*.txt'):
-        if 'test' in str(p):
-            continue
+    files_to_upload = []
+    if search_path.is_file():
+        files_to_upload.append(search_path)
+    else:
+        # Searching for .txt files in directory
+        for p in search_path.rglob('*.txt'):
+            if 'test' in str(p):
+                continue
+            files_to_upload.append(p)
+
+    for p in files_to_upload:
         try:
-            f = client.files.upload(file=p, config={'display_name': p.name})
+            # Gemini File API workaround: .json files must be text/plain to be used as context
+            mime_type = 'text/plain' if p.suffix.lower() == '.json' else None
+            
+            f = client.files.upload(
+                file=p, 
+                config={
+                    'display_name': p.name,
+                    'mime_type': mime_type
+                }
+            )
             files.append(f)
             print('.', end='', flush=True)
         except Exception as e:
             print(f"\nError uploading {p}: {e}")
 
     if not files:
-        print("\nNo .txt files found! Check the directory path and file extension.")
+        print("\nNo files found to upload! Check the path and file type.")
         return
 
     print(f"\nUploaded {len(files)} files.")
