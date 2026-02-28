@@ -8,3 +8,6 @@ scholar_results.txt
 browser_session
 downloads
 matches
+__pycache__
+*.html
+station_rainfall_data.json
