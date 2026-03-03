@@ -1,3 +1,4 @@
+# Code is generated with Gemini 3 Flash
 """
 Takes lat and long coordinates and a radius in km. Runs a query to HCDP API with chosen parameters 
 in the function fetch_rainfall_data(). Returns results to a json file.

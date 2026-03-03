@@ -1,12 +1,12 @@
+# Code is generated with Gemini 3 Flash
 """
-Takes a list of stations and creates a map with a HeatMap and color-coded markers 
+Takes a list of stations and creates a map with color-coded markers 
 representing average rainfall. Currently uses output from fetch_station_data.py and 
 map_HCDP_stations.py.
 """
 
 import json
 import folium
-from folium.plugins import HeatMap
 import branca.colormap as cm
 import os
 import numpy as np
@@ -17,7 +17,7 @@ OUTPUT_MAP = "average_rainfall_map.html"
 
 def create_rainfall_map():
     """
-    Processes station data to create a map with a HeatMap and color-coded markers 
+    Processes station data to create a map with color-coded markers 
     representing average rainfall.
     """
     # 1. Load the data
@@ -79,9 +79,6 @@ def create_rainfall_map():
     
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles='cartodbpositron')
 
-    # 5. Add HeatMap Layer (Shows density/intensity)
-    heat_data = [[s['lat'], s['lon'], s['avg_rainfall']] for s in stations_processed]
-    HeatMap(heat_data, radius=25, blur=15, min_opacity=0.3).add_to(m)
 
     # 6. Add Color-coded CircleMarkers
     for s in stations_processed:

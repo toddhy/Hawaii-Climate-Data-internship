@@ -1,5 +1,7 @@
+# Code is generated with Gemini 3 Flash
 """
-Finds stations within a given km radius and latitude/longitude coordinates.
+Finds stations within a given km radius and latitude/longitude coordinates. Adjust target latitude
+and longitude and radius in the main function to change the search parameters.
 """
 
 import pandas as pd

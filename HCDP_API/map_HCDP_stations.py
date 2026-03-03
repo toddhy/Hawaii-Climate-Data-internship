@@ -1,3 +1,4 @@
+# Code is generated with Gemini 3 Flash
 """
 This script creates an interactive map of HCDP weather stations using Folium. Takes json file as input
 and outputs an html map file. Uses output from fetch_station_data.py.
