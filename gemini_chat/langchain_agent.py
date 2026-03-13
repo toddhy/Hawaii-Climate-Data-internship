@@ -20,7 +20,7 @@ for path in [PROJECT_ROOT, HCDP_API_DIR]:
 try:
     from HCDP_API.station_finder import get_nearby_stations
     from HCDP_API.map_HCDP_stations import create_station_map
-    from HCDP_API.unified_rainfall_map import create_unified_map
+    from HCDP_API.map_visualizer import create_unified_map
 except ImportError as e:
     print(f"[!] Warning: Could not import HCDP_API modules ({e}). Tools may be disabled.")
     get_nearby_stations = None
@@ -104,7 +104,7 @@ def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 10
         return f"Error creating map: {str(e)}"
 
 @tool
-def generate_gridded_rainfall_map(latitude: float, longitude: float, radius_km: float = 50.0, use_existing_rainfall_data: bool = False) -> str:
+def generate_gridded_rainfall_map(latitude: float, longitude: float, radius_km: float = 10.0, use_existing_rainfall_data: bool = False) -> str:
     """
     Generates a unified rainfall map with a gridded raster overlay and station markers.
     The raster data is aggregated from local TIFF files. 
