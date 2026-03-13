@@ -66,7 +66,7 @@ def geocode_placename(place_name: str) -> str:
         return f"Geocoding error: {str(e)}"
 
 @tool
-def find_nearby_stations(latitude: float, longitude: float, radius_km: float = 10.0) -> str:
+def find_nearby_stations(latitude: float, longitude: float, radius_km: float = 5.0) -> str:
     """
     Finds weather stations within a specified kilometer radius of a given latitude and longitude.
     Returns a string representation of the stations found, including their ID (skn), name, and distance.
@@ -85,7 +85,7 @@ def find_nearby_stations(latitude: float, longitude: float, radius_km: float = 1
         return f"Error finding stations: {str(e)}"
 
 @tool
-def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 10.0) -> str:
+def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 5.0) -> str:
     """
     Finds weather stations within a specified kilometer radius and generates an interactive HTML map.
     Returns the file path of the generated map.
@@ -104,37 +104,42 @@ def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 10
         return f"Error creating map: {str(e)}"
 
 @tool
-def generate_gridded_map(latitude: float = 20.5, longitude: float = -157.5, radius_km: float = 10.0, use_existing_rainfall_data: bool = False, add_stations: bool = False, statewide: bool = False, data_type: str = 'rainfall') -> str:
+def generate_gridded_map(latitude: float = None, longitude: float = None, radius_km: float = None, data_type: str = 'rainfall', add_stations: bool = False, statewide: bool = False, start_date: str = None, end_date: str = None, use_existing_json: bool = True) -> str:
     """
-    Generates a unified HCDP map with a gridded raster overlay and optional station markers.
-    The raster data is aggregated from local TIFF files in 'monthly_rainfall' or 'monthly_temperature'.
-    If use_existing_rainfall_data is True, it tries to use 'station_rainfall_data.json' for colored markers.
-    If add_stations is True, it adds markers to the map. By default, it is False.
-    If statewide is True, it maps the entire state of Hawaii, ignoring radius clipping.
-    data_type can be 'rainfall' or 'temperature' (default: 'rainfall').
-    Useful when the user wants to visualize rainfall or temperature patterns.
+    Generates a unified map (rainfall or temperature) with a gridded raster overlay.
+    IMPORTANT: If a location name is given (e.g. 'Honolulu'), you MUST use geocode_placename first to get latitude/longitude.
+    Args:
+        latitude, longitude: Center of the map. REQUIRED unless statewide=True.
+        radius_km: Radius for clipping/masking (default is dynamic/5km).
+        data_type: 'rainfall' or 'temperature' (default: 'rainfall').
+        add_stations: Whether to include weather station markers (default: False).
+        statewide: If True, maps the entire state of Hawaii (ignores radius/center).
+        start_date: Start date for data aggregation (format: YYYY-MM).
+        end_date: End date for data aggregation (format: YYYY-MM).
+        use_existing_json: Whether to use 'station_rainfall_data.json' for station markers (default: True).
     """
     if create_unified_map is None:
         return "Error: Unified mapping utility not found."
     
-    output_file = f"unified_{data_type}_map.html"
+    output_file = "gridded_map.html"
     try:
         # Use absolute paths for reliability
-        json_path = os.path.join(HCDP_API_DIR, "station_rainfall_data.json") if use_existing_rainfall_data else None
-        # tiff_dir will be handled by create_unified_map defaults if None
+        json_path = os.path.join(HCDP_API_DIR, "station_rainfall_data.json")
         output_file_abs = os.path.join(PROJECT_ROOT, output_file)
 
         create_unified_map(
-            json_path=json_path,
-            tiff_dir=None, # Let it use defaults based on data_type
+            json_path=json_path if use_existing_json else None,
+            tiff_dir=None, # use defaults
             output_file=output_file_abs,
             center_lat=latitude,
             center_lon=longitude,
             radius_km=radius_km,
-            omit_json_data=not use_existing_rainfall_data,
+            omit_json_data=not use_existing_json,
             add_stations=add_stations,
             statewide=statewide,
-            data_type=data_type
+            data_type=data_type,
+            start_date=start_date,
+            end_date=end_date
         )
         return f"Unified {data_type} map generated successfully: {output_file_abs}"
     except Exception as e:

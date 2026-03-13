@@ -123,14 +123,32 @@ def mask_raster_to_circle(data, meta, center_lat, center_lon, radius_km):
     masked_data[dist > radius_km] = np.nan
     return masked_data
 
-def process_tiffs(tiff_dir):
+def process_tiffs(tiff_dir, start_date=None, end_date=None):
     """
     Aggregates TIFF files and returns data + metadata for overlay.
+    Filters by date range (YYYY-MM) if provided.
     """
     tiff_files = glob.glob(os.path.join(tiff_dir, "*.tiff"))
     if not tiff_files:
         return None, None, None
     
+    # Filter by date range
+    if start_date or end_date:
+        filtered_files = []
+        for f in tiff_files:
+            date_str = os.path.splitext(os.path.basename(f))[0]
+            if start_date and date_str < start_date:
+                continue
+            if end_date and date_str > end_date:
+                continue
+            filtered_files.append(f)
+        tiff_files = filtered_files
+        
+    if not tiff_files:
+        print(f"No TIFF files found within the range {start_date} to {end_date}.")
+        return None, None, None
+
+    print(f"Processing {len(tiff_files)} TIFF files...")
     aggregated_data = None
     meta = None
     count = 0
@@ -164,7 +182,7 @@ def process_tiffs(tiff_dir):
     
     return aggregated_data, folium_bounds, meta
 
-def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall'):
+def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None):
 
 
 
@@ -200,7 +218,7 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
         stations_with_data = get_station_data(json_path)
 
     # 3. Process TIFFs
-    raster_data, raster_bounds, raster_meta = process_tiffs(tiff_dir)
+    raster_data, raster_bounds, raster_meta = process_tiffs(tiff_dir, start_date, end_date)
 
     # 4. Determine Area of Interest
     if center_lat and center_lon:
@@ -224,9 +242,9 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
         elif stations_with_data:
 
             distances = [haversine_dist(center[0], center[1], s['lat'], s['lon']) for s in stations_with_data]
-            radius_km = max(distances) * 1.1 if distances else 10.0
+            radius_km = max(distances) * 1.1 if distances else 5.0
         else:
-            radius_km = 50.0 # Default radius for statewide/larger view if not specified
+            radius_km = 5.0 # Default radius if not specified
 
     # 5. Get location-only stations for markers if we want them
     # We combine them or replace them
@@ -351,8 +369,11 @@ def main():
     parser.add_argument("--add_stations", action="store_true", help="Include station markers on the map (default: False)")
     parser.add_argument("--statewide", action="store_true", help="Map the entire state (ignores radius clipping, default: False)")
     
+    parser.add_argument("--start_date", help="Start date in YYYY-MM format")
+    parser.add_argument("--end_date", help="End date in YYYY-MM format")
+    
     args = parser.parse_args()
-    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type)
+    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type, args.start_date, args.end_date)
 
 
 
