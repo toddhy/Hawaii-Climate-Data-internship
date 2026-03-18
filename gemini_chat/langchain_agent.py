@@ -3,7 +3,7 @@ import sys
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessage
+from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
 
 # 1. Setup Environment and Paths
 load_dotenv()
@@ -148,6 +148,17 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
 # 3. Simple Tool-Calling Loop & API Support
 llm_with_tools = None
 
+DEFAULT_SYSTEM_PROMPT = """You are the HCDP Assistant, a helpful AI specialized in Hawaii climate data.
+Follow these constraints strictly:
+1. Always be polite, concise, and professional.
+2. If the user asks for weather maps, identify their location first using geocoding if coordinates aren't provided.
+3. Only use the tools provided to you. If a user asks about topics completely unrelated to weather, geography, or climate in Hawaii, politely redirect them back to your specialty.
+4. Only search for locations within the state of Hawaii.
+5. If a place name exists outside of Hawaii, use the Hawaii one. 
+6. If only year is provided, make the date range Jan 1st of that year to Dec 31st of that year.
+7. Default the map radius to 5km if not specified.
+"""
+
 def initialize_agent():
     global llm_with_tools
     if llm_with_tools is not None:
@@ -177,6 +188,10 @@ def chat_with_agent(user_input: str, messages: list):
     """
     if llm_with_tools is None:
         initialize_agent()
+        
+    # Inject system prompt if this is a fresh conversation
+    if not messages:
+        messages.append(SystemMessage(content=DEFAULT_SYSTEM_PROMPT))
         
     messages.append(HumanMessage(content=user_input))
     new_map_path = None
@@ -233,8 +248,9 @@ def run_agent():
     initialize_agent()
     if llm_with_tools is None:
         return
-    # Simple message history
-    messages = []
+    
+    # Initialize message history with the system prompt
+    messages = [SystemMessage(content=DEFAULT_SYSTEM_PROMPT)]
 
     print("\n--- HCDP LangChain Agent Ready (Gridded Mapping Enabled) ---")
     print("Example: 'Create a gridded rainfall map for Honolulu'")
