@@ -32,6 +32,7 @@ A modern LangChain-based agent that uses local scripts as tools.
     - **Station Finder**: Finds weather stations within a specified radius.
     - **Interactive Mapping**: Generates station maps and unified gridded rainfall maps.
     - **TileDB Climate Queries**: Performs pixel-perfect historical lookups (Rainfall/Temperature) for any coordinate in Hawaii using the high-performance database.
+    - **Intelligent Defaults**: Automatically applies a **5.0 km radius** and the **current year (2026)** to map requests if they are not explicitly provided by the user.
     - **Tool Chaining**: Executes multi-step workflows in a single turn.
 - **Usage**: `python langchain_agent.py`
 

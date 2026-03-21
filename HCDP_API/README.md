@@ -47,7 +47,10 @@ The easiest way to use these tools is via the [chatbot](../gemini_chat/chatbot.p
 1.  **Search & Fetch**: Run `fetch_station_data.py` to find stations and download their data.
 2.  **Visualize**: Run `average_rainfall_map.py` to see results.
 3.  **Batch Export**: Use `tiff_downloader.py` for raw raster data.
-4.  **Database Ingestion**: Once TIFF files are downloaded, use `database/tiledb_ingest.py` to move them into the high-performance TileDB storage for faster AI querying.
+4.  **Database Ingestion**: Once TIFF files are downloaded, use `database/tiledb_ingest.py` to move them into the high-performance TileDB storage for faster AI querying. The database now supports data from **1990 to 2026**.
+
+> [!TIP]
+> If you notice differences between the raster TIFF values and station observations, refer to [database/DATA_DISCREPANCY.md](../database/DATA_DISCREPANCY.md) for a technical explanation.
 
 ---
 *Code in this directory was generated with the aid of Gemini 3 Flash.*

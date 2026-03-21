@@ -7,7 +7,8 @@ This directory contains the high-performance storage layer for the HCDP AI works
 - **`rainfall_array/`**: TileDB array containing monthly rainfall data (mm).
 - **`temperature_array/`**: TileDB array containing monthly temperature data (Celsius).
 - **`tiledb_ingest.py`**: Utility to ingest raw TIFF files from `HCDP_API/` into the TileDB arrays.
-- **`tiledb_access.py`**: A low-level API for reading metadata and slicing data from the arrays.
+- `tiledb_access.py`: Library functions for querying the arrays from other scripts.
+- `DATA_DISCREPANCY.md`: Important information explaining why gridded TileDB data may differ from raw station observations.
 
 ## Data Schema
 

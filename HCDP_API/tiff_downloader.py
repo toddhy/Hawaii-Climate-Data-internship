@@ -26,11 +26,11 @@ def download_tiff(date_str, output_path):
         'date': date_str,
         'location': 'hawaii',
         'returnEmptyNotFound': 'false',
-        'datatype': 'relative_humidity',
+        'datatype': 'temperature',
         'extent': 'statewide',
         #'production': 'new', #for rainfall only. values new/legacy
         'period': 'month',
-        #'aggregation': 'mean' #for temperature, comment out otherwise. values min/max/mean
+        'aggregation': 'min' #for temperature, comment out otherwise. values min/max/mean
     }
     
     headers = {

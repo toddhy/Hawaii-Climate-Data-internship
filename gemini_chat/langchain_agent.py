@@ -122,6 +122,14 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
         return "Error: Unified mapping utility not found."
     
     output_file = "gridded_map.html"
+    # Apply Defaults
+    if radius_km is None and not statewide:
+        radius_km = 5.0
+    
+    if start_date is None and end_date is None:
+        start_date = '2026-01'
+        end_date = '2026-12'
+
     try:
         # Use absolute paths for reliability
         json_path = os.path.join(HCDP_API_DIR, "station_rainfall_data.json")
@@ -201,9 +209,10 @@ Follow these constraints strictly:
 3. Only use the tools provided to you. If a user asks about topics completely unrelated to weather, geography, or climate in Hawaii, politely redirect them back to your specialty.
 4. Only search for locations within the state of Hawaii.
 5. If a place name exists outside of Hawaii, use the Hawaii one. 
-6. If only year is provided, make the date range Jan 1st of that year to Dec 31st of that year.
+6. If no date or only year is provided, default to January through December of the current year (2026).
 7. Default the map radius to 5km if not specified.
 8. For specific historical climate queries (temperature or rainfall), use the query_historical_climate_data tool after finding the coordinates.
+9. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 """
 
 def initialize_agent():
