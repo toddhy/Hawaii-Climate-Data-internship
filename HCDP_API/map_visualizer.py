@@ -196,6 +196,8 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
     if tiff_dir is None:
         if data_type == 'temperature':
             tiff_dir = os.path.join(script_dir, "monthly_temperature")
+        elif data_type == 'spi':
+            tiff_dir = os.path.join(script_dir, "spi")
         else:
             tiff_dir = os.path.join(script_dir, "monthly_rainfall")
 
@@ -271,6 +273,10 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
     if data_type == 'temperature':
         colors = ['#ffffcc', '#ffeb99', '#ffcc66', '#ff9933', '#ff6600', '#ff3300', '#cc0000', '#990000']
         caption = "Average Monthly Temperature (°C)"
+    elif data_type == 'spi':
+        # Diverging RdYlBu (Red for dry, Blue for wet)
+        colors = ['#a50026', '#d73027', '#f46d43', '#fdae61', '#fee090', '#ffffbf', '#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695']
+        caption = "Standardized Precipitation Index (SPI)"
     else:
         colors = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594']
         caption = "Average Monthly Rainfall (mm)"
@@ -357,7 +363,7 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
 
 def main():
     parser = argparse.ArgumentParser(description="Create a unified HCDP map (Stations + Raster).")
-    parser.add_argument("--type", choices=['rainfall', 'temperature'], default='rainfall', help="Data type to map (default: rainfall)")
+    parser.add_argument("--type", choices=['rainfall', 'temperature', 'spi'], default='rainfall', help="Data type to map (default: rainfall)")
     parser.add_argument("--json", default=DEFAULT_JSON, help=f"Station JSON file (default: {DEFAULT_JSON})")
     parser.add_argument("--tiff_dir", help="Directory with TIFFs (defaults to monthly_rainfall or monthly_temperature)")
     parser.add_argument("--output", default=OUTPUT_MAP, help=f"Output file (default: {OUTPUT_MAP})")

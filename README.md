@@ -13,9 +13,12 @@ We've integrated a Gemini 2.0 Flash powered chatbot that can:
 ### High-Performance TileDB Storage
 A centralized storage layer in `database/` that:
 - **Optimized Access**: Replaces slow individual TIFF reads with high-speed multi-dimensional array slicing.
-- **Pixel-Perfect AI Queries**: Provides the backend for the AI agent to retrieve exact historical climate values for any coordinate in Hawaii instantly.
-- **Decades of Coverage**: Now includes over **430 months** of data, spanning from **January 1990 to February 2026**.
-- **Scalable**: Efficiently manages ~12GB of raster data with optimized multi-dimensional indexing.
+- **Pixel-Perfect AI Queries**: Provides the backend for the AI agent to retrieve exact historical climate values (Temperature, Rainfall, and **SPI**) for any coordinate in Hawaii instantly.
+- **Decades of Coverage**: Now includes over **1,200 total time slices** across three variables:
+    - **Rainfall**: 1990 - 2026
+    - **Temperature**: 1990 - 2026
+    - **SPI (36-month timescale)**: 1992 - 2026
+- **Scalable**: Efficiently manages ~25GB of raster data with optimized multi-dimensional indexing.
 
 > [!NOTE]
 > For information on slight differences between gridded (TIFF) data and station observations, see [database/DATA_DISCREPANCY.md](database/DATA_DISCREPANCY.md).

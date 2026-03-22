@@ -42,12 +42,13 @@ Processes the rainfall data from `station_rainfall_data.json` to calculate the a
 The easiest way to use these tools is via the [chatbot](../gemini_chat/chatbot.py). You can simply ask:
 - *"What is the average rainfall in Honolulu?"* (Automates location lookup + fetch + map)
 - *"Download rainfall TIFFs for 2022"* (Triggers batch download)
+- *"Show me an SPI map for 2024"* (Generates 36-month SPI gridded map)
 
 ### Manual Workflow
 1.  **Search & Fetch**: Run `fetch_station_data.py` to find stations and download their data.
 2.  **Visualize**: Run `average_rainfall_map.py` to see results.
 3.  **Batch Export**: Use `tiff_downloader.py` for raw raster data.
-4.  **Database Ingestion**: Once TIFF files are downloaded, use `database/tiledb_ingest.py` to move them into the high-performance TileDB storage for faster AI querying. The database now supports data from **1990 to 2026**.
+4.  **Database Ingestion**: Once TIFF files are downloaded, use `database/tiledb_ingest.py` to move them into the high-performance TileDB storage for faster AI querying. The database now supports Rainfall, Temperature, and **36-month SPI** data from **1990 to 2026**.
 
 > [!TIP]
 > If you notice differences between the raster TIFF values and station observations, refer to [database/DATA_DISCREPANCY.md](../database/DATA_DISCREPANCY.md) for a technical explanation.

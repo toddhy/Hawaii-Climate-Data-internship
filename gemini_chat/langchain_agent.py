@@ -111,7 +111,7 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
     Args:
         latitude, longitude: Center of the map. REQUIRED unless statewide=True.
         radius_km: Radius for clipping/masking (default is dynamic/5km).
-        data_type: 'rainfall' or 'temperature' (default: 'rainfall').
+        data_type: 'rainfall' or 'temperature' or 'spi' (default: 'rainfall').
         add_stations: Whether to include weather station markers (default: False).
         statewide: If True, maps the entire state of Hawaii (ignores radius/center).
         start_date: Start date for data aggregation (format: YYYY-MM).
@@ -163,15 +163,22 @@ def query_historical_climate_data(latitude: float, longitude: float, month: str,
         latitude: Latitude coordinate.
         longitude: Longitude coordinate.
         month: The month to query, strictly formatted as 'YYYY-MM' (e.g. '1995-05').
-        variable: The type of data to query: 'temperature' (Celsius) or 'rainfall' (mm). Defaults to 'temperature'.
+        variable: The type of data to query: 'temperature' (Celsius), 'rainfall' (mm), or 'spi' (Standardized Precipitation Index). Defaults to 'temperature'.
     """
     try:
         from database.tiledb_access import get_metadata, get_data_for_month
         import numpy as np
         
         # Select the correct array based on the requested variable
-        array_name = "temperature_array" if variable.lower() == "temperature" else "rainfall_array"
-        unit = "degrees Celsius" if variable.lower() == "temperature" else "mm"
+        if variable.lower() == "temperature":
+            array_name = "temperature_array"
+            unit = "degrees Celsius"
+        elif variable.lower() == "spi":
+            array_name = "spi_array"
+            unit = "units (SPI)"
+        else:
+            array_name = "rainfall_array"
+            unit = "mm"
         
         db_path = os.path.join(PROJECT_ROOT, "database", array_name)
         if not os.path.exists(db_path):
@@ -211,8 +218,9 @@ Follow these constraints strictly:
 5. If a place name exists outside of Hawaii, use the Hawaii one. 
 6. If no date or only year is provided, default to January through December of the current year (2026).
 7. Default the map radius to 5km if not specified.
-8. For specific historical climate queries (temperature or rainfall), use the query_historical_climate_data tool after finding the coordinates.
-9. If statewide is False, radius_km must be at least 1.0 (default 5.0).
+8. For specific historical climate queries (temperature, rainfall, or SPI), use the query_historical_climate_data tool after finding the coordinates.
+9. SPI stands for Standardized Precipitation Index. It is used to represent drought (negative values) or wet conditions (positive values).
+10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 """
 
 def initialize_agent():
