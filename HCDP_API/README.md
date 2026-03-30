@@ -8,7 +8,7 @@ This directory contains Python scripts for interacting with the Hawaiʻi Climate
 A utility module that finds HCDP weather stations within a specified radius of a given latitude and longitude. It uses a local SQLite database for spatial queries and the Haversine formula for precise distance calculations.
 
 ### [fetch_station_data.py](fetch_station_data.py)
-Uses `station_finder.py` to identify nearby stations and سپس fetches monthly rainfall timeseries data.
+Uses `station_finder.py` to identify nearby stations and fetches monthly rainfall timeseries data.
 - **Usage**: `python fetch_station_data.py [lat] [lon] [radius]`
 - **Arguments**: Optional positional arguments for Latitude, Longitude, and Radius (km).
 
@@ -20,15 +20,14 @@ A batch downloader for HCDP rainfall TIFF rasters. Iterates through a specified 
 Creates an aggregate, colored rainfall map from a directory of TIFF files. It averages the raster data and generates a Folium map with an image overlay.
 - **Usage**: `python tiff_visualizer.py [--input_dir DIR]`
 
-### [unified_rainfall_map.py](unified_rainfall_map.py)
-Combines weather station markers (colored by rainfall or grey locations) and the aggregate rainfall raster (from TIFFs) onto a single interactive map. 
+### [map_visualizer.py](map_visualizer.py)
+A powerful tool that combines weather station markers (colored by climate metrics) and aggregate raster data into a single interactive map. Used for rainfall, temperature, and SPI visualizations.
 - **Features**: 
-    - **Data Independence**: Can map station locations using `station_finder` even if rainfall JSON data is missing.
-    - **Flexible Markers**: Automatically uses rainfall data for coloring if available; otherwise uses location markers.
+    - **Multiple Variables**: Supports rainfall, mean/max/min temperature, and SPI.
+    - **Flexible Markers**: Automatically uses station data for coloring if available; otherwise uses location markers.
     - **Spatial Clipping**: Automatically masks the raster data to a circular area around the center.
-    - **Robust TIFF Handling**: Checks for consistent shapes and handles file access errors gracefully.
-- **Usage**: `python unified_rainfall_map.py [--lat LAT] [--lon LON] [--radius KM] [--no_json]`
-- **Note**: Use `--no_json` to skip station rainfall data and just map coordinates.
+    - **TileDB Integration**: Optimized to slice and visualize data directly from the high-performance storage layer.
+- **Usage**: `python map_visualizer.py [--lat LAT] [--lon LON] [--radius KM] [--variable VAR]`
 
 ### [map_HCDP_stations.py](map_HCDP_stations.py)
 Takes the JSON output from `fetch_station_data.py` and generates an interactive Folium map (`station_map.html`) showing the locations of all identified stations with clickable popups.
@@ -39,10 +38,13 @@ Processes the rainfall data from `station_rainfall_data.json` to calculate the a
 ## Workflow & Automation
 
 ### Gemini Chatbot (Recommend)
-The easiest way to use these tools is via the [chatbot](../gemini_chat/chatbot.py). You can simply ask:
+The easiest way to use these tools is via the main application. You can simply ask:
 - *"What is the average rainfall in Honolulu?"* (Automates location lookup + fetch + map)
 - *"Download rainfall TIFFs for 2022"* (Triggers batch download)
 - *"Show me an SPI map for 2024"* (Generates 36-month SPI gridded map)
+
+> [!NOTE]
+> For legacy Gemini File-API interaction tools, see [utils/gemini_txtfile_interaction/chatbot.py](../utils/gemini_txtfile_interaction/chatbot.py).
 
 ### Manual Workflow
 1.  **Search & Fetch**: Run `fetch_station_data.py` to find stations and download their data.

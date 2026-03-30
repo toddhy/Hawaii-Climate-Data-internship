@@ -245,19 +245,32 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
     if radius_km is None:
         if statewide:
             radius_km = 500.0 # Large enough for all islands
-        elif stations_with_data:
-
-            distances = [haversine_dist(center[0], center[1], s['lat'], s['lon']) for s in stations_with_data]
-            radius_km = max(distances) * 1.1 if distances else 5.0
         else:
             radius_km = 5.0 # Default radius if not specified
 
-    # 5. Get location-only stations for markers if we want them
-    # We combine them or replace them
-    final_stations = stations_with_data
-    if not final_stations or omit_json_data:
-        # Fetch just locations
-        final_stations = get_location_only_stations(center[0], center[1], radius_km)
+    # 5. Spatially Filter Stations and Merge Results
+    print(f"[*] Spatial Search: center={center}, radius={radius_km:.2f}km")
+    
+    # A. Filter JSON stations spatially
+    spatially_filtered_json = []
+    for s in stations_with_data:
+        dist = haversine_dist(center[0], center[1], s['lat'], s['lon'])
+        if dist <= radius_km:
+            spatially_filtered_json.append(s)
+            
+    # B. Fetch all local station locations via station_finder
+    local_stations = get_location_only_stations(center[0], center[1], radius_km)
+    
+    # C. Merge Logic: JSON data takes priority for the same 'skn'
+    # Use a dict keyed by skn to merge
+    merged_map = {s['skn']: s for s in local_stations}
+    for s in spatially_filtered_json:
+        merged_map[s['skn']] = s 
+        
+    final_stations = list(merged_map.values())
+    
+    if not final_stations and not omit_json_data and stations_with_data:
+        print("[!] Warning: Found JSON stations but none were within the search radius.")
 
     if not final_stations and raster_data is None:
         print("No data found to map (Stations or Raster).")
@@ -320,10 +333,10 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
         ImageOverlay(image="temp_unified.png", bounds=raster_bounds, opacity=0.6, interactive=True, zindex=1).add_to(m)
 
     # 2. Add Station Markers
-    if add_stations and final_stations:
-
-        print(f"Adding {len(final_stations)} station markers...")
-        station_group = folium.FeatureGroup(name="Weather Stations").add_to(m)
+    if add_stations:
+        if final_stations:
+            print(f"[*] Adding {len(final_stations)} station markers to the map...")
+            station_group = folium.FeatureGroup(name="Weather Stations").add_to(m)
         for s in final_stations:
             if s['avg_rainfall'] is not None:
                 unit = "mm" if data_type == 'rainfall' else ""

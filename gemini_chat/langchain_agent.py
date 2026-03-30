@@ -89,7 +89,7 @@ def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 5.
     """
     Finds weather stations within a specified kilometer radius and generates an interactive HTML map.
     Returns the file path of the generated map.
-    Useful when the user wants to see the stations on a map.
+    Use this tool ONLY when the user wants a simple view of station locations WITHOUT any raster/gridded data overlays.
     """
     if create_station_map is None or get_nearby_stations is None:
         return "Error: Mapping tools not properly initialized."
@@ -112,7 +112,7 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
         latitude, longitude: Center of the map. REQUIRED unless statewide=True.
         radius_km: Radius for clipping/masking (default is dynamic/5km).
         data_type: 'rainfall' or 'temperature' or 'spi' (default: 'rainfall').
-        add_stations: Whether to include weather station markers (default: False).
+        add_stations: Set to True if the user mentions 'stations', 'markers', 'sensors', or 'locations' on the map. (default: False).
         statewide: If True, maps the entire state of Hawaii (ignores radius/center).
         start_date: Start date for data aggregation (format: YYYY-MM).
         end_date: End date for data aggregation (format: YYYY-MM).
@@ -227,6 +227,7 @@ Follow these constraints strictly:
 8. For specific historical climate queries (temperature, rainfall, or SPI), use the query_historical_climate_data tool after finding the coordinates.
 9. SPI stands for Standardized Precipitation Index. It is used to represent drought (negative values) or wet conditions (positive values).
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
+11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
 """
 
 def initialize_agent():
