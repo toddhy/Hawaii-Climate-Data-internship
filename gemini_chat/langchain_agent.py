@@ -104,7 +104,7 @@ def map_nearby_stations(latitude: float, longitude: float, radius_km: float = 5.
         return f"Error creating map: {str(e)}"
 
 @tool
-def generate_gridded_map(latitude: float = None, longitude: float = None, radius_km: float = None, data_type: str = 'rainfall', add_stations: bool = False, statewide: bool = False, start_date: str = None, end_date: str = None, use_existing_json: bool = True) -> str:
+def generate_gridded_map(latitude: float = None, longitude: float = None, radius_km: float = None, data_type: str = 'rainfall', add_stations: bool = False, statewide: bool = False, start_date: str = None, end_date: str = None, use_existing_json: bool = True, session_id: str = "default") -> str:
     """
     Generates a unified map (rainfall or temperature) with a gridded raster overlay.
     IMPORTANT: If a location name is given (e.g. 'Honolulu'), you MUST use geocode_placename first to get latitude/longitude.
@@ -121,7 +121,9 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
     if create_unified_map is None:
         return "Error: Unified mapping utility not found."
     
-    output_file = "gridded_map.html"
+    # Use session_id for unique filenames
+    clean_sid = "".join(x for x in str(session_id) if x.isalnum())
+    output_file = f"map_{clean_sid}.html" if clean_sid else "gridded_map.html"
     # Apply Defaults
     if radius_km is None and not statewide:
         radius_km = 5.0
@@ -252,7 +254,7 @@ def initialize_agent():
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
-def chat_with_agent(user_input: str, messages: list):
+def chat_with_agent(user_input: str, messages: list, session_id: str = "default"):
     """
     Takes user_input and an existing messages list.
     Returns (assistant_reply_text, updated_messages_list, new_map_path)
@@ -288,7 +290,13 @@ def chat_with_agent(user_input: str, messages: list):
                 
                 # Execute tool
                 print(f"[*] Calling tool: {tool_call['name']}({tool_call['args']})")
-                tool_output = selected_tool.invoke(tool_call)
+                
+                # Pass session_id to generate_gridded_map if applicable
+                args = tool_call['args']
+                if tool_call['name'] == "generate_gridded_map":
+                    args['session_id'] = session_id
+                
+                tool_output = selected_tool.invoke(args)
                 
                 # If tool created a map, extract its path for the UI
                 output_str = str(tool_output)

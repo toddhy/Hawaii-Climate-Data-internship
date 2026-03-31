@@ -54,6 +54,7 @@ async def startup_event():
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
+    print(f"[*] Incoming request for session: '{req.session_id}'")
     # Retrieve or create session history
     if req.session_id not in session_store:
         session_store[req.session_id] = []
@@ -61,7 +62,7 @@ async def chat_endpoint(req: ChatRequest):
     messages = session_store[req.session_id]
     
     # Run the agent
-    reply, new_messages, generated_map = chat_with_agent(req.message, messages)
+    reply, new_messages, generated_map = chat_with_agent(req.message, messages, req.session_id)
     
     # Update the internal session store reference
     session_store[req.session_id] = new_messages
