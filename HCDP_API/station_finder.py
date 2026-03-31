@@ -1,12 +1,10 @@
-# Code is generated with Gemini 3 Flash
-"""
-Finds stations within a given km radius and latitude/longitude coordinates. Adjust target latitude
-and longitude and radius in the main function to change the search parameters.
-"""
-
+import os
 import pandas as pd
 import sqlite3
 import math
+
+# Default to a project-local database path
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hcdp_stations.db")
 
 def haversine(lat1, lon1, lat2, lon2):
     """
@@ -23,7 +21,7 @@ def haversine(lat1, lon1, lat2, lon2):
     
     return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-def get_nearby_stations(target_lat, target_lon, radius_km, db_path=r'C:\SCIPE\my_maps\my_database.db'):
+def get_nearby_stations(target_lat, target_lon, radius_km, db_path=DEFAULT_DB_PATH):
     """
     Finds stations within a given radius using a bounding box pre-filter and Haversine distance.
     Returns a Pandas DataFrame of results.
