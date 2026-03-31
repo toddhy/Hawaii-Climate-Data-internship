@@ -1,0 +1,29 @@
+# Dependency list for HCDP-data-for-AI project
+# Excludes 'utils' folder scripts.
+
+# Web Framework and API
+fastapi
+uvicorn
+pydantic
+requests
+
+# LangChain and AI
+langchain
+langchain-core
+langchain-google-genai
+
+# Data Processing and Storage
+tiledb
+numpy
+pandas
+
+# Mapping, GIS and Visualization
+folium
+rasterio
+branca
+geopy
+matplotlib
+
+# Utilities
+python-dotenv
+python-dateutil
