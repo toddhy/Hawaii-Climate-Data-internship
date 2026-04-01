@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Configuration
-PROJECT_ROOT=$(pwd)
+# Automatically find the directory where this script is located
+PROJECT_ROOT=$(dirname "$(readlink -f "$0")")
 FRONTEND_DIR="$PROJECT_ROOT/front_end"
 NGINX_CONF="$PROJECT_ROOT/nginx.conf"
 NGINX_WEB_ROOT="/var/www/html"

@@ -11,18 +11,15 @@ function App() {
   }]);
   const [isLoading, setIsLoading] = useState(false);
   const [mapUrl, setMapUrl] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Initialize Session ID
-  useEffect(() => {
+  const [sessionId] = useState<string>(() => {
     let sid = localStorage.getItem('hcdp_session_id');
     if (!sid) {
-      sid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      sid = Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11);
       localStorage.setItem('hcdp_session_id', sid);
     }
-    setSessionId(sid);
-  }, []);
+    return sid;
+  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {

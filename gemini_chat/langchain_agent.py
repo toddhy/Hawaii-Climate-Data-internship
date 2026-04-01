@@ -297,9 +297,9 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                 # Execute tool
                 print(f"[*] Calling tool: {tool_call['name']}({tool_call['args']})")
                 
-                # Pass session_id to generate_gridded_map if applicable
+                # Pass session_id to the tool if it supports it
                 args = tool_call['args']
-                if tool_call['name'] == "generate_gridded_map":
+                if tool_call['name'] in ["generate_gridded_map", "map_nearby_stations"]:
                     args['session_id'] = session_id
                 
                 tool_output = selected_tool.invoke(args)

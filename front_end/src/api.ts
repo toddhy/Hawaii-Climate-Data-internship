@@ -14,7 +14,7 @@ const API_BASE_URL = window.location.port === '5173'
   ? `http://${window.location.hostname}:8000` 
   : `${window.location.protocol}//${window.location.host}/api`;
 
-export async function sendMessage(message: string, sessionId: string = 'default'): Promise<ChatResponse> {
+export async function sendMessage(message: string, sessionId: string): Promise<ChatResponse> {
   const res = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: {
