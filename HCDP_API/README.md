@@ -35,25 +35,13 @@ Takes the JSON output from `fetch_station_data.py` and generates an interactive 
 ### [average_rainfall_map.py](average_rainfall_map.py)
 Processes the rainfall data from `station_rainfall_data.json` to calculate the average monthly rainfall for each station. It then generates an interactive map (`average_rainfall_map.html`) with color-coded markers representing the rainfall intensity.
 
-## Workflow & Automation
-
-### Gemini Chatbot (Recommend)
-The easiest way to use these tools is via the main application. You can simply ask:
+### Quick Start (Recommended)
+The easiest way to interact with these tools is via the project's **Root AI Assistant**. You can simply ask:
 - *"What is the average rainfall in Honolulu?"* (Automates location lookup + fetch + map)
 - *"Download rainfall TIFFs for 2022"* (Triggers batch download)
 - *"Show me an SPI map for 2024"* (Generates 36-month SPI gridded map)
 
-> [!NOTE]
-> For legacy Gemini File-API interaction tools, see [utils/gemini_txtfile_interaction/chatbot.py](../utils/gemini_txtfile_interaction/chatbot.py).
-
-### Manual Workflow
-1.  **Search & Fetch**: Run `fetch_station_data.py` to find stations and download their data.
-2.  **Visualize**: Run `average_rainfall_map.py` to see results.
-3.  **Batch Export**: Use `tiff_downloader.py` for raw raster data.
-4.  **Database Ingestion**: Once TIFF files are downloaded, use `database/tiledb_ingest.py` to move them into the high-performance TileDB storage for faster AI querying. The database now supports Rainfall, Temperature, and **36-month SPI** data from **1990 to 2026**.
-
-> [!TIP]
-> If you notice differences between the raster TIFF values and station observations, refer to [database/DATA_DISCREPANCY.md](../database/DATA_DISCREPANCY.md) for a technical explanation.
+For persistent, automated workflows, you can also use the startup scripts in the project root (`start_app.cmd`, `start_app.ps1`, or `start_app.sh`).
 
 ---
-*Code in this directory was generated with the aid of Gemini 3 Flash.*
+*Code in this directory was generated with the aid of Gemini 2.0 Flash.*

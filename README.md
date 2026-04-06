@@ -35,12 +35,17 @@ A suite of tools located in `HCDP_API/` for:
 
 ## Quick Start
 
-To run the complete application (both the FastAPI backend and the React frontend), you can use the provided startup script:
+To run the complete application (both the FastAPI backend and the React frontend), you can use the following startup scripts:
 
-1.  **Double-click** `start_app.cmd` in the project root.
-2.  Alternatively, run `.\start_app.ps1` from a PowerShell terminal.
+- **Windows**: Double-click `start_app.cmd` or run `.\start_app.ps1` from PowerShell.
+- **Linux / macOS**: Run `./start_app.sh` from your terminal.
 
-The script will start both servers and ensure they are properly terminated when you close the window or press **Ctrl+C**.
+The script will handle dependency checks (e.g., `node_modules`, `.venv`), start both the backend and frontend servers, and ensure they are properly terminated when closed.
+
+## Maintenance and Deployment
+
+- **Deployment**: Use `./deploy.sh` to automate the deployment process to a remote server (e.g., Nginx setup).
+- **Data Synchronization**: Use `./sync.sh` to synchronize the local research corpus and TileDB database with remote sources.
 
 ## Useful Links
 - [System Architecture](ARCHITECTURE.md)
