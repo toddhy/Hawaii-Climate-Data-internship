@@ -2,6 +2,9 @@
 
 This directory contains scripts for interacting with the Gemini API using the `google-genai` File API.
 
+Detailed documentation on the agent's capabilities and its underlying technical architecture can be found in [AGENT_TOOLS.md](file:///c:/SCIPE/HCDP-data-for-AI/gemini_chat/AGENT_TOOLS.md).
+
+
 ## Scripts
 
 ### 1. `server.py` (Backend API)

@@ -10,6 +10,9 @@ We've integrated a Gemini 2.0 Flash powered chatbot that can:
 - **Intelligent Defaults**: Automatically applies a **5.0 km radius** and the **current year (2026)** to map requests if not specified.
 - **Batch Processing**: Handle complex workflows like "fetch data for Hilo and then map it".
 
+For a detailed breakdown of the agent's tools and the underlying technical architecture, see [AGENT_TOOLS.md](file:///c:/SCIPE/HCDP-data-for-AI/gemini_chat/AGENT_TOOLS.md).
+
+
 ### High-Performance TileDB Storage
 A centralized storage layer in `database/` that:
 - **Optimized Access**: Replaces slow individual TIFF reads with high-speed multi-dimensional array slicing.
@@ -48,6 +51,8 @@ The script will handle dependency checks (e.g., `node_modules`, `.venv`), start 
 - **Data Synchronization**: Use `./sync.sh` to synchronize the local research corpus and TileDB database with remote sources.
 
 ## Useful Links
+- [Database files](https://drive.google.com/file/d/1ziKvCJKqoPZUaJnIzUN4bQwdcNVA-fDu/view?usp=sharing)
+- [TIFF files](https://drive.google.com/file/d/1gIkX3MZ0_DjaBf8u7FsD6sNHf3o_mv_N/view?usp=sharing)
 - [System Architecture](ARCHITECTURE.md)
 - [Workflow](WORKFLOW.md)
 - [HCDP Publication List](https://www.hawaii.edu/climate-data-portal/publications-list/)
