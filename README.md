@@ -24,6 +24,8 @@ A centralized storage layer in `database/` that:
     - **Temperature (Min)**: 1990 - 2026
     - **SPI (36-month timescale)**: 1992 - 2026
 - **Scalable**: Efficiently manages ~25GB of raster data with optimized Zstd compression and multi-dimensional indexing.
+- **Robust NoData Handling**: Implements automated masking of legacy fill values (e.g., -9999.0) and extreme float values, ensuring all aggregations (mean, sum) are statistically accurate.
+- **Memory-Efficient**: Optimized for large-scale map generation using an incremental 2D accumulation strategy to handle decades of data without exhausting system RAM.
 
 > [!NOTE]
 > For information on slight differences between gridded (TIFF) data and station observations, see [database/DATA_DISCREPANCY.md](database/DATA_DISCREPANCY.md).

@@ -65,4 +65,4 @@ graph TD
 2.  **FastAPI Backend**: Acts as the bridge between the frontend and the AI. It manages conversation sessions and serves the generated HTML map files.
 3.  **LangChain Agent**: The "brain" of the application. It uses Gemini 2.0 Flash to understand intent and decides which local tools to call (geocoding, data querying, or mapping).
 4.  **HCDP API Tools**: Specialized Python scripts that perform heavy lifting like coordinate resolution, spatial searches, precision climate data querying, and raster map generation using `folium` and `rasterio`.
-5.  **TileDB Data Layer**: A high-performance spatial database storing over 30 years of monthly climate data for Hawaii, optimized for sub-second retrieval. Now supports Rainfall, Temperature, and SPI.
+5.  **TileDB Data Layer**: A high-performance spatial database storing over 30 years of monthly climate data for Hawaii. The access layer (`tiledb_access.py`) is optimized for both sub-second time-series retrieval and memory-efficient large-scale map generation through incremental 2D accumulation. It features robust automated NoData masking to ensure high data integrity for all numerical aggregations.

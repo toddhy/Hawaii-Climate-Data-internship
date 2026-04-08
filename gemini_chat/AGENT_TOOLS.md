@@ -17,7 +17,8 @@ Tools are high-level functions decorated with `@tool` that the LLM is explicitly
 | `find_nearby_stations` | Finds weather stations within a specific KM radius. | `latitude`, `longitude`, `radius_km` |
 | `map_nearby_stations` | Generates a basic HTML map showing station locations only. | `latitude`, `longitude`, `radius_km` |
 | `generate_gridded_map` | Generates a complex map with raster overlays (Rainfall/Temp) and stations. | `data_type`, `latitude`, `longitude`, `start_date`, `end_date`, `add_stations` |
-| `query_historical_climate_data` | Queries exact historical climate values from the TileDB database. | `latitude`, `longitude`, `month`, `variable` |
+| `query_historical_climate_data` | Queries exact historical climate values from the TileDB database for a single month. | `latitude`, `longitude`, `month`, `variable` |
+| `query_historical_timeseries` | Queries the TileDB database for summarized regional climate data over a date range. | `latitude`, `longitude`, `radius_km`, `start_date`, `end_date`, `variable` |
 
 ---
 

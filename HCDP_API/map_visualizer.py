@@ -29,6 +29,7 @@ import branca
 import argparse
 import pandas as pd
 from station_finder import get_nearby_stations
+from database.tiledb_access import get_raster_for_date_range
 
 # --- Configuration ---
 DEFAULT_JSON = "station_rainfall_data.json"
@@ -182,6 +183,41 @@ def process_tiffs(tiff_dir, start_date=None, end_date=None):
     
     return aggregated_data, folium_bounds, meta
 
+def process_tiledb(data_type, start_date=None, end_date=None):
+    """
+    Aggregates data from TileDB and returns data + metadata for overlay.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    db_dir = os.path.join(project_root, "database")
+    
+    array_name_map = {
+        'rainfall': 'rainfall_array',
+        'temperature': 'temperature_array',
+        'min_temp': 'min_temp_array',
+        'max_temp': 'max_temp_array',
+        'spi': 'spi_array'
+    }
+    
+    if data_type not in array_name_map:
+        return None, None, None
+        
+    array_uri = os.path.join(db_dir, array_name_map[data_type])
+    if not os.path.exists(array_uri):
+        print(f"TileDB array not found at {array_uri}")
+        return None, None, None
+        
+    # All mapping currently expects 'mean' (average monthly values)
+    aggregation = 'mean'
+    
+    print(f"Processing data from TileDB array: {array_name_map[data_type]}...")
+    try:
+        data, bounds, meta = get_raster_for_date_range(array_uri, start_date, end_date, aggregation)
+        return data, bounds, meta
+    except Exception as e:
+        print(f"Error processing TileDB: {e}")
+        return None, None, None
+
 def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None):
 
 
@@ -223,8 +259,12 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
     if not omit_json_data and json_path:
         stations_with_data = get_station_data(json_path)
 
-    # 3. Process TIFFs
-    raster_data, raster_bounds, raster_meta = process_tiffs(tiff_dir, start_date, end_date)
+    # 3. Process Data (TileDB first, then TIFFs)
+    raster_data, raster_bounds, raster_meta = process_tiledb(data_type, start_date, end_date)
+    
+    if raster_data is None:
+        print("Falling back to TIFF processing...")
+        raster_data, raster_bounds, raster_meta = process_tiffs(tiff_dir, start_date, end_date)
 
     # 4. Determine Area of Interest
     if center_lat and center_lon:

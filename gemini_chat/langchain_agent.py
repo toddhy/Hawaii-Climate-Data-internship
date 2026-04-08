@@ -220,6 +220,97 @@ def query_historical_climate_data(latitude: float, longitude: float, month: str,
     except Exception as err:
         return f"Error querying TileDB database: {str(err)}"
 
+@tool
+def query_historical_timeseries(latitude: float, longitude: float, start_date: str, end_date: str, radius_km: float = 5.0, variable: str = 'rainfall') -> str:
+    """
+    Queries the high-performance TileDB database for a summarized time-series of climate data over a date range.
+    Use this tool when the user asks for data over multiple months or years (e.g., '2010-2015').
+    IMPORTANT: If a location name is given (e.g. 'Honolulu'), you MUST use geocode_placename first.
+    Args:
+        latitude, longitude: Center coordinates of the area of interest.
+        start_date, end_date: Strictly formatted as 'YYYY-MM' (e.g. '2008-01' to '2021-12').
+        radius_km: Radius in kilometers to average the data over (default 5.0 km).
+        variable: 'rainfall' (mm), 'temperature' (Celsius), or 'spi'. Defaults to 'rainfall'.
+    """
+    try:
+        from database.tiledb_access import get_metadata, get_timeseries_for_region
+        import numpy as np
+        
+        # Select the correct array
+        if variable.lower() == "temperature":
+            array_name = "temperature_array"
+            unit = "Celsius"
+        elif variable.lower() == "max_temp":
+            array_name = "max_temp_array"
+            unit = "Celsius"
+        elif variable.lower() == "min_temp":
+            array_name = "min_temp_array"
+            unit = "Celsius"
+        elif variable.lower() == "spi":
+            array_name = "spi_array"
+            unit = "SPI"
+        else:
+            array_name = "rainfall_array"
+            unit = "mm"
+        
+        db_path = os.path.join(PROJECT_ROOT, "database", array_name)
+        if not os.path.exists(db_path):
+            return f"Error: TileDB database for {variable} not found."
+            
+        meta = get_metadata(db_path)
+        a, b, c, d, e, f = meta["transform"]
+        
+        # Center pixel
+        center_col = int((longitude - c) / a)
+        center_row = int((latitude - f) / e)
+        
+        # Convert radius_km to degrees (approximate)
+        # Hawaii approx: 1 deg lat = 111km, 1 deg lon = 104km
+        deg_lat = radius_km / 111.0
+        deg_lon = radius_km / 104.0
+        
+        # Pixel delta (taking abs because 'e' is usually negative)
+        delta_col = abs(int(deg_lon / a))
+        delta_row = abs(int(deg_lat / e))
+        
+        # Bounding box in pixels
+        y_min, y_max = center_row - delta_row, center_row + delta_row
+        x_min, x_max = center_col - delta_col, center_col + delta_col
+        
+        # Bounds check
+        if x_max < 0 or x_min >= meta["width"] or y_max < 0 or y_min >= meta["height"]:
+            return f"Error: The requested area at ({latitude}, {longitude}) is outside the Hawaii database bounds."
+            
+        series = get_timeseries_for_region(db_path, start_date, end_date, y_min, y_max, x_min, x_max)
+        
+        if not series:
+            return f"No {variable} data found for the range {start_date} to {end_date} in this region."
+            
+        # Format a summary
+        months = sorted(series.keys())
+        values = [series[m] for m in months]
+        avg_val = sum(values) / len(values)
+        max_val, min_val = max(values), min(values)
+        
+        summary = f"Summary for {variable} near ({latitude}, {longitude}) from {start_date} to {end_date} ({radius_km}km radius):\n"
+        summary += f"- Average: {avg_val:.2f} {unit}\n"
+        summary += f"- Maximum: {max_val:.2f} {unit} ({months[values.index(max_val)]})\n"
+        summary += f"- Minimum: {min_val:.2f} {unit} ({months[values.index(min_val)]})\n"
+        summary += f"- Data Points: {len(series)} months"
+        
+        # If the series is short, list it. Otherwise, mention it can be plotted.
+        if len(series) <= 12:
+            summary += "\n\nMonthly Breakdown:\n"
+            for m in months:
+                summary += f"  {m}: {series[m]:.2f} {unit}\n"
+        else:
+            summary += "\n\n(Note: Detailed monthly data is available for all 168 months if needed.)"
+                
+        return summary
+            
+    except Exception as err:
+        return f"Error in regional query: {str(err)}"
+
 # 3. Simple Tool-Calling Loop & API Support
 llm_with_tools = None
 
@@ -232,7 +323,9 @@ Follow these constraints strictly:
 5. If a place name exists outside of Hawaii, use the Hawaii one. 
 6. If no date or only year is provided, default to January through December of the current year (2026).
 7. Default the map radius to 5km if not specified.
-8. For specific historical climate queries (temperature, rainfall, or SPI), use the query_historical_climate_data tool after finding the coordinates.
+8. For specific historical climate queries (temperature, rainfall, or SPI):
+   - Use 'query_historical_timeseries' for multi-month or multi-year ranges.
+   - Use 'query_historical_climate_data' for a single specific month.
 9. SPI stands for Standardized Precipitation Index. It is used to represent drought (negative values) or wet conditions (positive values).
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
@@ -256,7 +349,7 @@ def initialize_agent():
     )
 
     # Bind tools to the LLM
-    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data]
+    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries]
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
@@ -289,7 +382,8 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                     "find_nearby_stations": find_nearby_stations,
                     "map_nearby_stations": map_nearby_stations,
                     "generate_gridded_map": generate_gridded_map,
-                    "query_historical_climate_data": query_historical_climate_data
+                    "query_historical_climate_data": query_historical_climate_data,
+                    "query_historical_timeseries": query_historical_timeseries
                 }
 
                 selected_tool = tool_map[tool_call["name"]]
@@ -371,7 +465,8 @@ def run_agent():
                         "find_nearby_stations": find_nearby_stations,
                         "map_nearby_stations": map_nearby_stations,
                         "generate_gridded_map": generate_gridded_map,
-                        "query_historical_climate_data": query_historical_climate_data
+                        "query_historical_climate_data": query_historical_climate_data,
+                        "query_historical_timeseries": query_historical_timeseries
                     }
 
                     selected_tool = tool_map[tool_call["name"]]
