@@ -59,20 +59,32 @@ def get_nearby_stations(target_lat, target_lon, radius_km, db_path=DEFAULT_DB_PA
     return df_result
 
 if __name__ == "__main__":
+    import argparse
+    
     # --- Configuration ---
-    target_lat, target_lon = 19.6728, -156.0203
-    radius_km = 10.0
+    # Default to Hilo area for testing if no arguments provided
+    DEFAULT_LAT, DEFAULT_LON = 19.67, -155.02
+    DEFAULT_RADIUS = 10.0
+
+    parser = argparse.ArgumentParser(description="Find HCDP weather stations near a coordinate.")
+    parser.add_argument("lat", type=float, nargs='?', default=DEFAULT_LAT, help=f"Latitude (default: {DEFAULT_LAT})")
+    parser.add_argument("lon", type=float, nargs='?', default=DEFAULT_LON, help=f"Longitude (default: {DEFAULT_LON})")
+    parser.add_argument("radius", type=float, nargs='?', default=DEFAULT_RADIUS, help=f"Radius in km (default: {DEFAULT_RADIUS})")
+    
+    args = parser.parse_args()
 
     # Set Pandas options for CLI display
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 1000)
 
-    results = get_nearby_stations(target_lat, target_lon, radius_km)
+    print(f"[*] Searching for stations within {args.radius}km of ({args.lat}, {args.lon})...")
+    results = get_nearby_stations(args.lat, args.lon, args.radius)
     
     if not results.empty:
-        print(f"Stations within {radius_km}km of ({target_lat}, {target_lon}):")
-        print(results.to_string())
+        print(f"\n[+] Found {len(results)} stations:")
+        print(results.to_string(index=False))
     else:
-        print(f"No stations found within {radius_km}km of ({target_lat}, {target_lon}).")
+        print(f"\n[!] No stations found within {args.radius}km of ({args.lat}, {args.lon}).")
+        print("Note: Ensure HCDP_API/hcdp_stations.db has been initialized from a master station list.")
 

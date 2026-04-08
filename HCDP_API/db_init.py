@@ -1,18 +1,43 @@
 import os
-import json
+import csv
 import sqlite3
 
-def init_db(json_path="station_rainfall_data.json", db_path="hcdp_stations.db"):
+def init_db(source_path="master_stations.csv", db_path="hcdp_stations.db"):
     """
-    Initializes a local SQLite database from station data found in JSON.
+    Initializes a local SQLite database from station data (CSV or JSON).
     """
-    if not os.path.exists(json_path):
-        print(f"Error: Could not find {json_path}")
+    if not os.path.exists(source_path):
+        print(f"Error: Could not find {source_path}")
         return
 
-    print(f"[*] Reading station data from {json_path}...")
-    with open(json_path, 'r') as f:
-        data = json.load(f)
+    print(f"[*] Reading station data from {source_path}...")
+    
+    stations = []
+    
+    # Handle CSV (New Master Format)
+    if source_path.endswith('.csv'):
+        with open(source_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                stations.append({
+                    'skn': float(row['skn']),
+                    'name': row['name'],
+                    'lat': float(row['lat']),
+                    'lng': float(row['lng'])
+                })
+    # Handle JSON (Legacy Rainfall Results Format)
+    elif source_path.endswith('.json'):
+        with open(source_path, 'r') as f:
+            data = json.load(f)
+            for entry in data:
+                if 'station_info' in entry:
+                    info = entry['station_info']
+                    stations.append({
+                        'skn': info['skn'],
+                        'name': info['name'],
+                        'lat': info['lat'],
+                        'lng': info.get('lon') or info.get('lng')
+                    })
 
     print(f"[*] Connecting to database at {db_path}...")
     conn = sqlite3.connect(db_path)
@@ -29,18 +54,17 @@ def init_db(json_path="station_rainfall_data.json", db_path="hcdp_stations.db"):
         )
     """)
 
+    # Create spatial indices
+    cursor.execute("CREATE INDEX idx_lat ON hcd_stations(lat)")
+    cursor.execute("CREATE INDEX idx_lng ON hcd_stations(lng)")
+
     # Populate table
     count = 0
-    for entry in data:
-        if 'station_info' not in entry:
-            continue
-        info = entry['station_info']
-        
-        # Map JSON 'lon' to DB 'lng' as expected by station_finder.py
+    for s in stations:
         cursor.execute("""
             INSERT INTO hcd_stations (skn, name, lat, lng)
             VALUES (?, ?, ?, ?)
-        """, (info['skn'], info['name'], info['lat'], info['lon']))
+        """, (s['skn'], s['name'], s['lat'], s['lng']))
         count += 1
 
     conn.commit()
@@ -50,7 +74,14 @@ def init_db(json_path="station_rainfall_data.json", db_path="hcdp_stations.db"):
 if __name__ == "__main__":
     # Use paths relative to this script
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    target_json = os.path.join(base_dir, "station_rainfall_data.json")
+    
+    # Try CSV first (new source), then fall back to JSON
+    source_csv = os.path.join(base_dir, "master_stations.csv")
+    source_json = os.path.join(base_dir, "station_rainfall_data.json")
+    
     target_db = os.path.join(base_dir, "hcdp_stations.db")
     
-    init_db(target_json, target_db)
+    if os.path.exists(source_csv):
+        init_db(source_csv, target_db)
+    else:
+        init_db(source_json, target_db)
