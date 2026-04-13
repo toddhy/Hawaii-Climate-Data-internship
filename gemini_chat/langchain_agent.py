@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
+import pandas as pd
 
 # 1. Setup Environment and Paths
 load_dotenv()
@@ -16,16 +17,37 @@ for path in [PROJECT_ROOT, HCDP_API_DIR]:
     if path not in sys.path:
         sys.path.append(path)
 
-# Import HCDP_API modules
+# Import HCDP_API modules (isolated to prevent one failure from disabling all tools)
 try:
     from HCDP_API.station_finder import get_nearby_stations
+except ImportError as e:
+    print(f"[!] Warning: Could not import station_finder ({e})")
+    get_nearby_stations = None
+
+try:
     from HCDP_API.map_HCDP_stations import create_station_map
+except ImportError as e:
+    print(f"[!] Warning: Could not import map_HCDP_stations ({e})")
+    create_station_map = None
+
+try:
     from HCDP_API.map_visualizer import create_unified_map
 except ImportError as e:
-    print(f"[!] Warning: Could not import HCDP_API modules ({e}). Tools may be disabled.")
-    get_nearby_stations = None
-    create_station_map = None
+    print(f"[!] Warning: Could not import map_visualizer ({e})")
     create_unified_map = None
+
+try:
+    # Attempt to import from the HCDP_API package
+    try:
+        from HCDP_API.graph_generator import create_climatogram_file
+    except (ImportError, ModuleNotFoundError):
+        # Fallback for different path structures
+        from graph_generator import create_climatogram_file
+    
+    print("[*] graph_generator imported successfully.")
+except Exception as e:
+    print(f"[!] Warning: Could not import graph_generator. Climatogram tool will be disabled. Reason: {e}")
+    create_climatogram_file = None
 
 # Import geopy
 try:
@@ -311,6 +333,110 @@ def query_historical_timeseries(latitude: float, longitude: float, start_date: s
     except Exception as err:
         return f"Error in regional query: {str(err)}"
 
+@tool
+def generate_climatogram(latitude: float, longitude: float, start_year: int = None, end_year: int = None, units: str = 'metric', session_id: str = "default") -> str:
+    """
+    Generates an interactive Climatogram (combined temperature and rainfall seasonal chart) for a location.
+    Use this when the user asks for a 'climate chart', 'climatogram', or 'typical seasonal weather'.
+    Args:
+        latitude, longitude: Coordinates (use geocode_placename first if given a name).
+        start_year, end_year: Years to average over (e.g. 2010 to 2020). If omitted, defaults to the last 10 years of data.
+        units: 'metric' (default: Celsius/mm) or 'imperial' (Fahrenheit/inches).
+        session_id: Unique session ID for unique filenames.
+    """
+    if create_climatogram_file is None:
+        return "Error: Graph generator utility not found."
+    
+    try:
+        from database.tiledb_access import get_metadata, get_timeseries_for_region
+        import numpy as np
+        from collections import defaultdict
+        
+        # 1. Determine Date Range (Default to last 10 years)
+        temp_db_path = os.path.join(PROJECT_ROOT, "database", "temperature_array")
+        if not os.path.exists(temp_db_path):
+            return f"Error: Temperature database not found at {temp_db_path}"
+            
+        meta = get_metadata(temp_db_path)
+        available_months = sorted(meta["time_mapping"].keys())
+        latest_year = int(available_months[-1].split("-")[0])
+        
+        if end_year is None:
+            end_year = latest_year
+        if start_year is None:
+            start_year = end_year - 9 # Last 10 years
+
+        start_date = f"{start_year}-01"
+        end_date = f"{end_year}-12"
+
+        # 2. Setup Pixel Bounds (5km radius as requested)
+        a, b, c, d, e, f = meta["transform"]
+        radius_km = 5.0
+        deg_lat = radius_km / 111.0
+        deg_lon = radius_km / 104.0
+        
+        center_col = int((longitude - c) / a)
+        center_row = int((latitude - f) / e)
+        delta_col = abs(int(deg_lon / a))
+        delta_row = abs(int(deg_lat / e))
+        
+        y_min, y_max = center_row - delta_row, center_row + delta_row
+        x_min, x_max = center_col - delta_col, center_col + delta_col
+
+        # 3. Query Data
+        rain_db_path = os.path.join(PROJECT_ROOT, "database", "rainfall_array")
+        
+        temp_series = get_timeseries_for_region(temp_db_path, start_date, end_date, y_min, y_max, x_min, x_max)
+        rain_series = get_timeseries_for_region(rain_db_path, start_date, end_date, y_min, y_max, x_min, x_max)
+
+        if not temp_series or not rain_series:
+            return f"Error: Could not retrieve enough data for a chart at ({latitude}, {longitude}) for the range {start_year}-{end_year}."
+
+        # 4. Aggregate by Month
+        monthly_temp = defaultdict(list)
+        monthly_rain = defaultdict(list)
+
+        for date_str, val in temp_series.items():
+            month_idx = int(date_str.split("-")[1])
+            monthly_temp[month_idx].append(val)
+        
+        for date_str, val in rain_series.items():
+            month_idx = int(date_str.split("-")[1])
+            monthly_rain[month_idx].append(val)
+
+        # Calculate Means
+        months_label = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        final_temp = [np.mean(monthly_temp[i]) if i in monthly_temp else np.nan for i in range(1, 13)]
+        final_rain = [np.mean(monthly_rain[i]) if i in monthly_rain else np.nan for i in range(1, 13)]
+
+        # 5. Handle Unit Conversion
+        temp_unit = "°C"
+        rain_unit = "mm"
+        if units.lower() == 'imperial':
+            final_temp = [(t * 9/5) + 32 for t in final_temp]
+            final_rain = [r / 25.4 for r in final_rain]
+            temp_unit = "°F"
+            rain_unit = "inches"
+
+        # 6. Generate Plot
+        df_plot = pd.DataFrame({
+            'Month': months_label,
+            'Temp_C': final_temp,
+            'Rainfall_mm': final_rain
+        })
+
+        clean_sid = "".join(x for x in str(session_id) if x.isalnum())
+        output_file = f"climatogram_{clean_sid}.html" if clean_sid else "climatogram.html"
+        output_path = os.path.join(PROJECT_ROOT, output_file)
+
+        chart_title = f"Climate Climatogram ({start_year}-{end_year}) - Units: {units.capitalize()}"
+        abs_path = create_climatogram_file(df_plot, output_path=output_path, title=chart_title, auto_open=False)
+
+        return f"Interactive climatogram created successfully: {abs_path}"
+
+    except Exception as e:
+        return f"Error generating climatogram: {str(e)}"
+
 # 3. Simple Tool-Calling Loop & API Support
 llm_with_tools = None
 
@@ -326,9 +452,11 @@ Follow these constraints strictly:
 8. For specific historical climate queries (temperature, rainfall, or SPI):
    - Use 'query_historical_timeseries' for multi-month or multi-year ranges.
    - Use 'query_historical_climate_data' for a single specific month.
+   - Use 'generate_climatogram' when the user asks for a chart, graph, or seasonal typical weather breakdown.
 9. SPI stands for Standardized Precipitation Index. It is used to represent drought (negative values) or wet conditions (positive values).
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
+12. For 'generate_climatogram', always ask for a location first if not provided. Metric units are the default.
 """
 
 def initialize_agent():
@@ -349,7 +477,7 @@ def initialize_agent():
     )
 
     # Bind tools to the LLM
-    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries]
+    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram]
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
@@ -383,7 +511,8 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                     "map_nearby_stations": map_nearby_stations,
                     "generate_gridded_map": generate_gridded_map,
                     "query_historical_climate_data": query_historical_climate_data,
-                    "query_historical_timeseries": query_historical_timeseries
+                    "query_historical_timeseries": query_historical_timeseries,
+                    "generate_climatogram": generate_climatogram
                 }
 
                 selected_tool = tool_map[tool_call["name"]]
@@ -393,7 +522,7 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                 
                 # Pass session_id to the tool if it supports it
                 args = tool_call['args']
-                if tool_call['name'] in ["generate_gridded_map", "map_nearby_stations"]:
+                if tool_call['name'] in ["generate_gridded_map", "map_nearby_stations", "generate_climatogram"]:
                     args['session_id'] = session_id
                 
                 tool_output = selected_tool.invoke(args)
@@ -466,7 +595,8 @@ def run_agent():
                         "map_nearby_stations": map_nearby_stations,
                         "generate_gridded_map": generate_gridded_map,
                         "query_historical_climate_data": query_historical_climate_data,
-                        "query_historical_timeseries": query_historical_timeseries
+                        "query_historical_timeseries": query_historical_timeseries,
+                        "generate_climatogram": generate_climatogram
                     }
 
                     selected_tool = tool_map[tool_call["name"]]

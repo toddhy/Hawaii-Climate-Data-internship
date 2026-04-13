@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # Configuration
 # Automatically find the directory where this script is located
@@ -49,12 +49,19 @@ sudo nginx -t && sudo systemctl reload nginx
 echo "[*] Starting FastAPI Backend..."
 cd "$PROJECT_ROOT" || exit
 
-if [ -f "$VENV_PATH/bin/activate" ]; then
-    source "$VENV_PATH/bin/activate"
-    echo "[*] Activated virtual environment: $VENV_PATH"
-else
-    echo "[!] Warning: Virtual environment not found at $VENV_PATH. Using system python."
+# Create the virtual environment if it doesn't already exist
+if [ ! -f "$VENV_PATH/bin/activate" ]; then
+    echo "[*] Virtual environment not found. Creating one at $VENV_PATH..."
+    python3 -m venv "$VENV_PATH"
 fi
+
+# Always activate the venv before installing/running
+source "$VENV_PATH/bin/activate"
+echo "[*] Activated virtual environment: $VENV_PATH"
+
+# Install/update Python dependencies into the venv (never global)
+echo "[*] Installing Python dependencies from requirements.txt..."
+pip install -r "$PROJECT_ROOT/requirements.txt" --quiet
 
 echo "------------------------------------------------"
 echo "SUCCESS: HCDP AI is now live!"
@@ -63,5 +70,8 @@ echo "Backend: Port 8000 (proxied via /api/)"
 echo "------------------------------------------------"
 echo "[*] Displaying server logs below (Ctrl+C to stop the server):"
 
-# Run backend in foreground
-python "$BACKEND_SCRIPT"
+# Set production mode (disables uvicorn --reload, enables clean Ctrl+C shutdown)
+export HCDP_ENV=production
+
+# Use 'exec' to replace this shell with Python — signals (Ctrl+C) go directly to it
+exec python "$BACKEND_SCRIPT"

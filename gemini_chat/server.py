@@ -1,5 +1,6 @@
 import os
 import sys
+import signal
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -95,4 +96,17 @@ async def chat_endpoint(req: ChatRequest):
     
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+
+    # Use reload only in development. Set HCDP_ENV=production to disable.
+    is_production = os.getenv("HCDP_ENV", "development").lower() == "production"
+    use_reload = not is_production
+
+    # Ensure Ctrl+C (SIGINT) and SIGTERM cause a clean exit
+    def handle_shutdown(signum, frame):
+        print("\n[*] Shutdown signal received. Stopping server...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
+
+    uvicorn.run("gemini_chat.server:app", host="0.0.0.0", port=8000, reload=use_reload)

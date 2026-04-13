@@ -28,7 +28,10 @@ from folium.raster_layers import ImageOverlay
 import branca
 import argparse
 import pandas as pd
-from station_finder import get_nearby_stations
+try:
+    from .station_finder import get_nearby_stations
+except ImportError:
+    from station_finder import get_nearby_stations
 from database.tiledb_access import get_raster_for_date_range
 
 # --- Configuration ---

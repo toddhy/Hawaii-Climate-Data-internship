@@ -23,6 +23,7 @@ rasterio
 branca
 geopy
 matplotlib
+plotly
 
 # Utilities
 python-dotenv
