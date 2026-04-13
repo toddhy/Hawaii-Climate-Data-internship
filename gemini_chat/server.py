@@ -13,6 +13,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 from gemini_chat.langchain_agent import chat_with_agent, initialize_agent
+from gemini_chat.cleanup_manager import cleanup_outputs
 
 app = FastAPI(title="HCDP Agent API")
 
@@ -51,10 +52,12 @@ session_store = {}
 async def startup_event():
     # Warm up the agent (initialize model, geocoder, tools)
     initialize_agent()
+    # Initial cleanup of old files on start
+    cleanup_outputs(max_age_hours=24)
     print("[*] API Backend initialized.")
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest):
+async def chat_endpoint(req: ChatRequest, background_tasks: BackgroundTasks):
     print(f"[*] Incoming request for session: '{req.session_id}'")
     # Retrieve or create session history
     if req.session_id not in session_store:
@@ -64,6 +67,9 @@ async def chat_endpoint(req: ChatRequest):
     
     # Run the agent
     reply, new_messages, generated_map = chat_with_agent(req.message, messages, req.session_id)
+    
+    # Schedule cleanup in the background after the response is sent
+    background_tasks.add_task(cleanup_outputs, max_age_hours=24)
     
     # Update the internal session store reference
     session_store[req.session_id] = new_messages
