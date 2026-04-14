@@ -463,6 +463,24 @@ Follow these constraints strictly:
 12. For 'generate_climatogram', always ask for a location first if not provided. Metric units are the default.
 """
 
+def normalize_content(content):
+    """
+    Normalizes message content to a string.
+    Newer Gemini models (via LangChain) can return content as a list of dictionaries.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for part in content:
+            if isinstance(part, dict) and 'text' in part:
+                text_parts.append(part['text'])
+            elif isinstance(part, str):
+                text_parts.append(part)
+        return "".join(text_parts)
+    return str(content)
+
+
 def initialize_agent():
     global llm_with_tools
     if llm_with_tools is not None:
@@ -473,9 +491,9 @@ def initialize_agent():
         print("[!] ERROR: GOOGLE_API_KEY not found.")
         return
 
-    # Initialize Gemini 2.0 Flash
+    # Initialize Gemini 3 Flash
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-3-flash-preview",
         google_api_key=api_key,
         temperature=0
     )
@@ -558,7 +576,7 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
             response = llm_with_tools.invoke(messages)
             messages.append(response)
             
-        return response.content, messages, new_map_path
+        return normalize_content(response.content), messages, new_map_path
     except Exception as e:
         print(f"\nError: {e}")
         return f"Error: {e}", messages, None

@@ -28,6 +28,14 @@ from folium.raster_layers import ImageOverlay
 import branca
 import argparse
 import pandas as pd
+import sys
+
+# Add project root to path so we can import from database folder
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 try:
     from .station_finder import get_nearby_stations
 except ImportError:
@@ -186,34 +194,38 @@ def process_tiffs(tiff_dir, start_date=None, end_date=None):
     
     return aggregated_data, folium_bounds, meta
 
-def process_tiledb(data_type, start_date=None, end_date=None):
+def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None):
     """
     Aggregates data from TileDB and returns data + metadata for overlay.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)
-    db_dir = os.path.join(project_root, "database")
-    
-    array_name_map = {
-        'rainfall': 'rainfall_array',
-        'temperature': 'temperature_array',
-        'min_temp': 'min_temp_array',
-        'max_temp': 'max_temp_array',
-        'spi': 'spi_array'
-    }
-    
-    if data_type not in array_name_map:
-        return None, None, None
+    if array_uri is None:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        db_dir = os.path.join(project_root, "database")
         
-    array_uri = os.path.join(db_dir, array_name_map[data_type])
+        array_name_map = {
+            'rainfall': 'rainfall_array',
+            'temperature': 'temperature_array',
+            'min_temp': 'min_temp_array',
+            'max_temp': 'max_temp_array',
+            'spi': 'spi_array'
+        }
+        
+        if data_type not in array_name_map:
+            return None, None, None
+            
+        array_uri = os.path.join(db_dir, array_name_map[data_type])
+
     if not os.path.exists(array_uri):
         print(f"TileDB array not found at {array_uri}")
         return None, None, None
         
     # All mapping currently expects 'mean' (average monthly values)
-    aggregation = 'mean'
+    # Note: For rainfall this might be 'sum' if aggregating multiple days/months, 
+    # but 'mean' is used hereafter for unified range calculation.
+    aggregation = 'sum' if data_type == 'rainfall' else 'mean'
     
-    print(f"Processing data from TileDB array: {array_name_map[data_type]}...")
+    print(f"Processing data from TileDB array: {os.path.basename(array_uri)}...")
     try:
         data, bounds, meta = get_raster_for_date_range(array_uri, start_date, end_date, aggregation)
         return data, bounds, meta
@@ -221,7 +233,7 @@ def process_tiledb(data_type, start_date=None, end_date=None):
         print(f"Error processing TileDB: {e}")
         return None, None, None
 
-def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None):
+def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None, array_uri=None):
 
 
 
@@ -263,7 +275,7 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
         stations_with_data = get_station_data(json_path)
 
     # 3. Process Data (TileDB first, then TIFFs)
-    raster_data, raster_bounds, raster_meta = process_tiledb(data_type, start_date, end_date)
+    raster_data, raster_bounds, raster_meta = process_tiledb(data_type, start_date, end_date, array_uri)
     
     if raster_data is None:
         print("Falling back to TIFF processing...")
@@ -426,6 +438,7 @@ def main():
     parser.add_argument("--type", choices=['rainfall', 'temperature', 'spi', 'min_temp', 'max_temp'], default='rainfall', help="Data type to map (default: rainfall)")
     parser.add_argument("--json", default=DEFAULT_JSON, help=f"Station JSON file (default: {DEFAULT_JSON})")
     parser.add_argument("--tiff_dir", help="Directory with TIFFs (defaults to monthly_rainfall or monthly_temperature)")
+    parser.add_argument("--array_uri", help="Path to a specific TileDB array to use as the raster source")
     parser.add_argument("--output", default=OUTPUT_MAP, help=f"Output file (default: {OUTPUT_MAP})")
 
     parser.add_argument("--lat", type=float, help="Center latitude for clipping")
@@ -435,11 +448,11 @@ def main():
     parser.add_argument("--add_stations", action="store_true", help="Include station markers on the map (default: False)")
     parser.add_argument("--statewide", action="store_true", help="Map the entire state (ignores radius clipping, default: False)")
     
-    parser.add_argument("--start_date", help="Start date in YYYY-MM format")
-    parser.add_argument("--end_date", help="End date in YYYY-MM format")
+    parser.add_argument("--start_date", help="Start date (YYYY-MM or YYYY-MM-DD)")
+    parser.add_argument("--end_date", help="End date (YYYY-MM or YYYY-MM-DD)")
     
     args = parser.parse_args()
-    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type, args.start_date, args.end_date)
+    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type, args.start_date, args.end_date, args.array_uri)
 
 
 
