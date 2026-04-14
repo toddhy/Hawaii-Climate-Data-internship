@@ -34,14 +34,41 @@ A suite of tools located in `HCDP_API/` for:
 - Creating unified maps with both station points and gridded rainfall overlays.
 - Creating interactive rainfall distribution maps.
 
-## Quick Start
+## Quick Installation Instructions
 
-To run the complete application (both the FastAPI backend and the React frontend), you can use the following startup scripts:
+Install prerequisite software:
+```
+sudo apt install npm
+```
+Clone the repository and make startup script executable:
+```
+git clone https://github.com/toddhy/Hawaii-Climate-Data-internship.git
+cd Hawaii-Climate-Data-internship/
+chmod +x start_app.sh
+```
+Optional but highly recommended, create python venv and switch to it before installing python modules. It may give you instructions to install correct version of venv for you if not installed:
+```
+python3 -m venv .venv
+source .venv/bin/activate
+```
+Install python packages:
+```
+pip install -r requirements.txt
+```
+Install node packages:
+```
+npm install
+```
 
-- **Windows**: Double-click `start_app.cmd` or run `.\start_app.ps1` from PowerShell.
-- **Linux / macOS**: Run `./start_app.sh` from your terminal.
+## Troubleshooting ##
 
-The script will handle dependency checks (e.g., `node_modules`, `.venv`), start both the backend and frontend servers, and ensure they are properly terminated when closed.
+Upgrade node version:
+```
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v  # Should show v22.x.x
+```
+
 
 ## Maintenance and Deployment
 
