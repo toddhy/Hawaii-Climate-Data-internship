@@ -12,8 +12,6 @@ graph TD
     end
     subgraph "⚙️ Backend (FastAPI)<br/>"
         Srv["<b>Server</b><br/>(server.py)"]
-        DB_Sess[("<b>Session Store</b><br/>(Memory)")]
-        Cleanup["<b>Cleanup Manager</b><br/>(24h Retention)"]
     end
     subgraph "🤖 AI Agent (LangChain)<br/>"
         Agent["<b>LangChain Agent</b><br/>(langchain_agent.py)"]
