@@ -1,5 +1,5 @@
 # HCDP-data-for-AI
-Analyzing data from the Hawaii Climate Data Portal.
+AI chatbot using data from the Hawaii Climate Data Portal.
 
 ## Quick Installation Instructions
 
