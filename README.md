@@ -1,10 +1,48 @@
 # HCDP-data-for-AI
 Analyzing data from the Hawaii Climate Data Portal.
 
+## Quick Installation Instructions
+
+Install prerequisite software:
+```
+sudo apt install npm
+```
+Clone the repository and make startup script executable:
+```
+git clone https://github.com/toddhy/Hawaii-Climate-Data-internship.git
+cd Hawaii-Climate-Data-internship/
+chmod +x start_app.sh
+```
+Optional but highly recommended, create python venv and switch to it before installing python modules. It may give you instructions to install correct version of venv for you if not installed:
+```
+python3 -m venv .venv
+source .venv/bin/activate
+```
+Install python packages:
+```
+pip install -r requirements.txt
+```
+Install node packages:
+```
+npm install
+```
+Download database files from [Database files](https://drive.google.com/file/d/1ziKvCJKqoPZUaJnIzUN4bQwdcNVA-fDu/view?usp=sharing) and extract them to the `database/` directory.
+
+## Troubleshooting ##
+
+May need to upgrade node version:
+```
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+nvm use --lts
+# To make it the default for new terminals:
+nvm alias default 'lts/*'
+```
+
 ## Project Highlights
 
-### Gemini Chatbot Automation
-We've integrated a Gemini 3.1 Flash powered chatbot that can:
+### Gemini Chatbot 
 - **Execute Local Scripts**: Trigger data fetching and mapping directly from natural language.
 - **Inferred Geolocation**: Understand place names (like "Honolulu") and automatically provide coordinates to data scripts.
 - **Intelligent Defaults**: Automatically applies a **5.0 km radius** and the **current year (2026)** to map requests if not specified.
@@ -34,45 +72,10 @@ A suite of tools located in `HCDP_API/` for:
 - Creating unified maps with both station points and gridded rainfall overlays.
 - Creating interactive rainfall distribution maps.
 
-## Quick Installation Instructions
-
-Install prerequisite software:
-```
-sudo apt install npm
-```
-Clone the repository and make startup script executable:
-```
-git clone https://github.com/toddhy/Hawaii-Climate-Data-internship.git
-cd Hawaii-Climate-Data-internship/
-chmod +x start_app.sh
-```
-Optional but highly recommended, create python venv and switch to it before installing python modules. It may give you instructions to install correct version of venv for you if not installed:
-```
-python3 -m venv .venv
-source .venv/bin/activate
-```
-Install python packages:
-```
-pip install -r requirements.txt
-```
-Install node packages:
-```
-npm install
-```
-
-## Troubleshooting ##
-
-Upgrade node version:
-```
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs
-node -v  # Should show v22.x.x
-```
 
 
-## Maintenance and Deployment
 
-- **Deployment**: Use `./deploy.sh` to automate the deployment process to a remote server (e.g., Nginx setup).
+
 
 ## Useful Links
 - [Database files](https://drive.google.com/file/d/1ziKvCJKqoPZUaJnIzUN4bQwdcNVA-fDu/view?usp=sharing)

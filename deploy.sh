@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # Configuration
 # Automatically find the directory where this script is located
@@ -14,6 +14,28 @@ echo "------------------------------------------------"
 echo "Starting HCDP AI Deployment Script"
 echo "------------------------------------------------"
 
+# --- Helper Functions ---
+# Checks if a file has changed by comparing its MD5 hash with a stored value
+check_hash() {
+    local file=$1
+    local hash_file=$2
+    
+    # If file doesn't exist, we can't check it
+    if [ ! -f "$file" ]; then return 0; fi
+    
+    local current_hash=$(md5sum "$file" | awk '{ print $1 }')
+    
+    if [ -f "$hash_file" ]; then
+        local last_hash=$(cat "$hash_file")
+        if [ "$current_hash" == "$last_hash" ]; then
+            return 1 # No change
+        fi
+    fi
+    # Update hash file
+    echo "$current_hash" > "$hash_file"
+    return 0 # Changed or first run
+}
+
 # 1. Clean up existing processes
 echo "[*] Stopping existing application processes..."
 fuser -k 8000/tcp 2>/dev/null
@@ -25,7 +47,15 @@ fuser -k 5173/tcp 2>/dev/null
 # 2. Build Frontend
 echo "[*] Building frontend assets..."
 cd "$FRONTEND_DIR" || exit
-npm install
+
+# Only npm install if package.json changed or node_modules is missing
+if check_hash "package.json" "$PROJECT_ROOT/.last_frontend_hash" || [ ! -d "node_modules" ]; then
+    echo "[*] Changes detected or fresh install. Running npm install..."
+    npm install
+else
+    echo "[*] No changes to package.json. Skipping npm install."
+fi
+
 npm run build
 
 # 3. Deploy Frontend to Nginx
@@ -50,18 +80,24 @@ echo "[*] Starting FastAPI Backend..."
 cd "$PROJECT_ROOT" || exit
 
 # Create the virtual environment if it doesn't already exist
+VENV_CREATED=false
 if [ ! -f "$VENV_PATH/bin/activate" ]; then
     echo "[*] Virtual environment not found. Creating one at $VENV_PATH..."
     python3 -m venv "$VENV_PATH"
+    VENV_CREATED=true
 fi
 
 # Always activate the venv before installing/running
 source "$VENV_PATH/bin/activate"
 echo "[*] Activated virtual environment: $VENV_PATH"
 
-# Install/update Python dependencies into the venv (never global)
-echo "[*] Installing Python dependencies from requirements.txt..."
-pip install -r "$PROJECT_ROOT/requirements.txt" --quiet
+# Install/update Python dependencies into the venv only if requirements.txt changed
+if check_hash "$PROJECT_ROOT/requirements.txt" "$PROJECT_ROOT/.last_backend_hash" || [ "$VENV_CREATED" = true ]; then
+    echo "[*] Changes detected or fresh venv. Installing Python dependencies..."
+    pip install -r "$PROJECT_ROOT/requirements.txt" --quiet
+else
+    echo "[*] No changes to requirements.txt. Skipping pip install."
+fi
 
 echo "------------------------------------------------"
 echo "SUCCESS: HCDP AI is now live!"

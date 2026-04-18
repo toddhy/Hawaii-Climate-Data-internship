@@ -52,8 +52,12 @@ max_temp_array
 database.7z
 tiff_files.7z
 2026_daily_rainfall
+2026_daily_rainfall
 
 
 
+.last_frontend_hash
+.last_backend_hash
+annotated_papers.md
 .last_frontend_hash
 .last_backend_hash

@@ -1,8 +1,16 @@
 """
-Takes a start and end date in YYYY-MM or YYYY-MM-DD format and downloads TIFF files for each unit in that range. 
-The data is from https://api.hcdp.ikewai.org/raster
-example (monthly): python tiff_downloader.py 2022-01 2022-12
-example (daily): python tiff_downloader.py 2026-01-01 2026-04-01
+HCDP TIFF Downloader Utility
+
+This script facilitates batch downloading GeoTIFF raster data from the Hawaii Climate Data Portal (HCDP) API.
+It supports both monthly and daily data for various climate variables.
+
+Usage (Monthly):
+    python tiff_downloader.py 2022-01 2022-12 --datatype rainfall
+
+Usage (Daily):
+    python tiff_downloader.py 2026-01-01 2026-04-01 --datatype rainfall
+
+The API requires an authentication token, which should be set in the HCDP_API_TOKEN environment variable.
 """
 
 import os
@@ -22,6 +30,15 @@ AUTH_TOKEN = os.getenv("HCDP_API_TOKEN")
 def download_tiff(date_str, output_path, datatype='rainfall', period='month'):
     """
     Downloads a single TIFF file for a specific date from the HCDP API.
+
+    Args:
+        date_str (str): The date string in YYYY-MM or YYYY-MM-DD format.
+        output_path (str): The local file path to save the downloaded TIFF.
+        datatype (str): The climate variable to download (e.g., 'rainfall', 'temperature').
+        period (str): The time resolution of the data ('month' or 'day').
+
+    Returns:
+        bool: True if the download was successful, False otherwise.
     """
     params = {
         'date': date_str,

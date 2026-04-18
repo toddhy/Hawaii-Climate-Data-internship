@@ -12,7 +12,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
-from gemini_chat.langchain_agent import chat_with_agent, initialize_agent
+from gemini_chat.langchain_agent import chat_with_agent, initialize_agent, normalize_content
 from gemini_chat.cleanup_manager import cleanup_outputs
 
 app = FastAPI(title="HCDP Agent API")
@@ -85,7 +85,7 @@ async def chat_endpoint(req: ChatRequest, background_tasks: BackgroundTasks):
             role = "tool"
         
         # We'll mostly just pass the text back for display, though React side can filter
-        serializable_msgs.append(ChatMessage(role=role, content=str(m.content)))
+        serializable_msgs.append(ChatMessage(role=role, content=normalize_content(m.content)))
         
     # Return response payload
     map_url = None
