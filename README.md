@@ -40,7 +40,13 @@ nvm use --lts
 nvm alias default 'lts/*'
 ```
 
-## Project Highlights
+### Project Highlights 
+
+- **Natural Language Mapping**: Ask for rainfall or temperature maps for any month or date range (1990–Present).
+- **Interactive Map Grid (Small Multiples)**: Generate multiple maps in one session and view them in a responsive, interactive grid.
+- **Side-by-Side Comparison**: Use "Dual Maps" to compare two different dates or variables with synchronized controls.
+- **Map Focus & Export**: Expand individual maps to full-screen or download them as standalone interactive HTML files for offline research.
+- **Climatogram Generation**: Request historical climate charts for specific coordinates.
 
 ### Gemini Chatbot 
 - **Execute Local Scripts**: Trigger data fetching and mapping directly from natural language.
@@ -49,20 +55,10 @@ nvm alias default 'lts/*'
 
 For a detailed breakdown of the agent's tools and the underlying technical architecture, see [AGENT_TOOLS.md](file:///c:/SCIPE/HCDP-data-for-AI/gemini_chat/AGENT_TOOLS.md).
 
-
 ### High-Performance TileDB Storage
 A centralized storage layer in `database/` that:
 - **`optimize_storage.py`**: Utility to migrate/re-ingest TileDB data with high-level Zstd compression (Level 7) for maximum disk efficiency.
 - **Pixel-Perfect AI Queries**: Provides the backend for the AI agent to retrieve exact historical climate values for any coordinate in Hawaii instantly.
-- **Decades of Coverage**: Now includes over **1,800 total time slices** across five variables:
-    - **Rainfall**: 1990 - 2026
-    - **Temperature (Mean)**: 1990 - 2026
-    - **Temperature (Max)**: 1990 - 2026
-    - **Temperature (Min)**: 1990 - 2026
-    - **SPI (36-month timescale)**: 1992 - 2026
-- **Scalable**: Efficiently manages ~11GB of raster data with optimized Zstd (TileDB) and LZW (TIFF) compression.
-- **Robust NoData Handling**: Implements automated masking of legacy fill values (e.g., -9999.0) and extreme float values, ensuring all aggregations (mean, sum) are statistically accurate.
-- **Memory-Efficient**: Optimized for large-scale map generation using an incremental 2D accumulation strategy to handle decades of data without exhausting system RAM.
 
 ### HCDP API Tools
 A suite of tools located in `HCDP_API/` for:

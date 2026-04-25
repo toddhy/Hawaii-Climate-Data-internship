@@ -35,10 +35,11 @@ except ImportError as e:
     create_station_map = None
 
 try:
-    from HCDP_API.map_visualizer import create_unified_map
+    from HCDP_API.map_visualizer import create_unified_map, create_dual_map
 except ImportError as e:
     print(f"[!] Warning: Could not import map_visualizer ({e})")
     create_unified_map = None
+    create_dual_map = None
 
 try:
     # Attempt to import from the HCDP_API package
@@ -186,6 +187,49 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
         return f"Unified {data_type} map generated successfully: {output_file_abs}"
     except Exception as e:
         return f"Error creating unified map: {str(e)}"
+
+@tool
+def generate_dual_map(latitude: float, longitude: float, radius_km: float = 5.0, data_type1: str = 'rainfall', start_date1: str = None, end_date1: str = None, data_type2: str = 'rainfall', start_date2: str = None, end_date2: str = None, session_id: str = "default") -> str:
+    """
+    Generates a synchronized dual-map (side-by-side) for comparing two different datasets or time periods.
+    Args:
+        latitude, longitude: Center of the maps.
+        radius_km: Radius for data clipping (default 5km).
+        data_type1, data_type2: 'rainfall', 'temperature', or 'spi'.
+        start_date1, end_date1: Date range for the first map (left side).
+        start_date2, end_date2: Date range for the second map (right side).
+    """
+    if create_dual_map is None:
+        return "Error: Dual mapping utility not found."
+    
+    clean_sid = "".join(x for x in str(session_id) if x.isalnum())
+    output_file = f"dual_map_{clean_sid}.html" if clean_sid else "dual_map.html"
+    output_file_abs = os.path.join(OUTPUTS_DIR, output_file)
+    
+    # Defaults
+    if start_date1 is None: start_date1 = '2025-01'
+    if end_date1 is None: end_date1 = '2025-12'
+    if start_date2 is None: start_date2 = '2026-01'
+    if end_date2 is None: end_date2 = '2026-12'
+    
+    try:
+        json_path = os.path.join(HCDP_API_DIR, "station_rainfall_data.json")
+        path = create_dual_map(
+            json_path=json_path,
+            output_file=output_file_abs,
+            center_lat=latitude,
+            center_lon=longitude,
+            radius_km=radius_km,
+            data_type1=data_type1,
+            start_date1=start_date1,
+            end_date1=end_date1,
+            data_type2=data_type2,
+            start_date2=start_date2,
+            end_date2=end_date2
+        )
+        return f"Dual map for comparison generated successfully: {path}"
+    except Exception as e:
+        return f"Error creating dual map: {str(e)}"
 
 @tool
 def query_historical_climate_data(latitude: float, longitude: float, month: str, variable: str = 'temperature') -> str:
@@ -461,6 +505,16 @@ Follow these constraints strictly:
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
 12. For 'generate_climatogram', always ask for a location first if not provided. Metric units are the default.
+<<<<<<< HEAD
+=======
+13. RAINFALL EXTREMES (Top 1%):
+    - If a user asks for 'top 1%' or 'rainfall extremes', they are referring to the 99th percentile (R99P) of DAILY rainfall intensity.
+    - DO NOT use SPI (Standardized Precipitation Index) as a proxy for 'top 1%' unless specifically asked for anomalies. SPI > 2.0 means 'extremely wet month', not necessarily the heaviest daily events.
+    - For specific locations, use 'query_rainfall_extremes'.
+    - For maps, use 'generate_gridded_map' with data_type='daily_rainfall'.
+14. DUAL MAPS:
+    - Use 'generate_dual_map' when the user wants to COMPARE two time periods or two variables side-by-side.
+>>>>>>> 72fd7e0 (Add ability to interact with multiple generated maps. Can expand or download chosen maps.)
 """
 
 def normalize_content(content):
@@ -499,7 +553,7 @@ def initialize_agent():
     )
 
     # Bind tools to the LLM
-    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram]
+    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, generate_dual_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram]
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
@@ -532,6 +586,7 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                     "find_nearby_stations": find_nearby_stations,
                     "map_nearby_stations": map_nearby_stations,
                     "generate_gridded_map": generate_gridded_map,
+                    "generate_dual_map": generate_dual_map,
                     "query_historical_climate_data": query_historical_climate_data,
                     "query_historical_timeseries": query_historical_timeseries,
                     "generate_climatogram": generate_climatogram
@@ -544,7 +599,7 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                 
                 # Pass session_id to the tool if it supports it
                 args = tool_call['args']
-                if tool_call['name'] in ["generate_gridded_map", "map_nearby_stations", "generate_climatogram"]:
+                if tool_call['name'] in ["generate_gridded_map", "generate_dual_map", "map_nearby_stations", "generate_climatogram"]:
                     args['session_id'] = session_id
                 
                 tool_output = selected_tool.invoke(args)
@@ -616,6 +671,7 @@ def run_agent():
                         "find_nearby_stations": find_nearby_stations,
                         "map_nearby_stations": map_nearby_stations,
                         "generate_gridded_map": generate_gridded_map,
+                        "generate_dual_map": generate_dual_map,
                         "query_historical_climate_data": query_historical_climate_data,
                         "query_historical_timeseries": query_historical_timeseries,
                         "generate_climatogram": generate_climatogram

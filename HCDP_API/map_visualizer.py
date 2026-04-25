@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import folium
 from folium.raster_layers import ImageOverlay
+from folium.plugins import DualMap
 import branca
 import argparse
 import pandas as pd
@@ -435,6 +436,66 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
     print(f"Success! Unified map generated: {os.path.abspath(output_file)}")
     if os.path.exists("temp_unified.png"):
         os.remove("temp_unified.png")
+
+def create_dual_map(json_path, output_file, center_lat, center_lon, radius_km, data_type1, start_date1, end_date1, data_type2, start_date2, end_date2, add_stations=False):
+    """
+    Creates a synchronized dual map for comparison.
+    """
+    print(f"Generating Dual Map: {data_type1} ({start_date1} to {end_date1}) vs {data_type2} ({start_date2} to {end_date2})")
+    
+    center = [center_lat, center_lon] if center_lat and center_lon else [21.3069, -157.8583]
+    zoom = 10 if radius_km and radius_km < 20 else 8
+    
+    m = DualMap(location=center, zoom_start=zoom, tiles='cartodbpositron')
+    
+    # helper to add content to one side of the dual map
+    def add_to_side(side_map, d_type, s_date, e_date, caption_prefix):
+        # 1. Process Data
+        raster_data, raster_bounds, raster_meta = process_tiledb(d_type, s_date, e_date)
+        
+        # 2. Setup Colormap
+        if d_type == 'temperature' or d_type == 'min_temp' or d_type == 'max_temp':
+            colors = ['#ffffcc', '#ffeb99', '#ffcc66', '#ff9933', '#ff6600', '#ff3300', '#cc0000', '#990000']
+            caption = f"{caption_prefix} Avg {d_type.capitalize()} (°C)"
+        elif d_type == 'spi':
+            colors = ['#a50026', '#d73027', '#f46d43', '#fdae61', '#fee090', '#ffffbf', '#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695']
+            caption = f"{caption_prefix} SPI"
+        else:
+            colors = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#084594']
+            caption = f"{caption_prefix} Avg Rainfall (mm)"
+            
+        if raster_data is not None:
+            vmin, vmax = np.nanmin(raster_data), np.nanmax(raster_data)
+            if np.isnan(vmin): vmin, vmax = 0, 100
+            
+            colormap = branca.colormap.LinearColormap(colors=colors, vmin=vmin, vmax=vmax, caption=caption)
+            
+            cmap = mcolors.LinearSegmentedColormap.from_list("hcdp", colors)
+            norm = plt.Normalize(vmin=vmin, vmax=vmax)
+            colored_data = cmap(norm(raster_data))
+            colored_data[np.isnan(raster_data), 3] = 0
+            
+            temp_name = f"temp_dual_{caption_prefix.lower()}.png"
+            plt.imsave(temp_name, colored_data)
+            ImageOverlay(image=temp_name, bounds=raster_bounds, opacity=0.6, interactive=True).add_to(side_map)
+            colormap.add_to(side_map)
+            return temp_name
+        return None
+
+    temp_files = []
+    t1 = add_to_side(m.m1, data_type1, start_date1, end_date1, "Side A")
+    t2 = add_to_side(m.m2, data_type2, start_date2, end_date2, "Side B")
+    if t1: temp_files.append(t1)
+    if t2: temp_files.append(t2)
+    
+    m.save(output_file)
+    print(f"Success! Dual map generated: {output_file}")
+    
+    for f in temp_files:
+        if os.path.exists(f):
+            os.remove(f)
+    
+    return os.path.abspath(output_file)
 
 def main():
     parser = argparse.ArgumentParser(description="Create a unified HCDP map (Stations + Raster).")

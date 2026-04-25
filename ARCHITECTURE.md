@@ -70,3 +70,19 @@ graph TD
 3.  **LangChain Agent**: The "brain" of the application. It uses Gemini 3.1 Flash to understand intent and decides which local tools to call (geocoding, data querying, mapping, or climatogram generation).
 4.  **HCDP API Tools**: Specialized Python scripts for coordinate resolution, spatial searches, precision climate data querying, and visual generation (Leaflet/Folium maps and Plotly climatograms).
 5.  **TileDB Data Layer**: A high-performance spatial database storing over 30 years of monthly climate data. It is now optimized with **LZW/Zstd compression**, reducing the footprint from ~25GB to **~11GB** while maintaining sub-second query performance.
+
+## Advanced Visualization Engine
+
+The system supports complex spatial comparisons through two primary patterns:
+
+### 1. Dual Map Synchronization (Side-by-Side)
+Used for direct temporal or multivariate comparison (e.g., Rainfall vs. Temperature for the same month).
+- **Mechanism**: Utilizes `folium.plugins.DualMap`.
+- **Synchronization**: Zoom and Pan actions are synchronized across both map halves via shared Leaflet events.
+- **Independent/Unified Scaling**: Each map calculates its own scale by default, ensuring data visibility even across disparate variables.
+
+### 2. Small Multiples (Interactive Grid)
+Allows for the accumulation and comparison of many maps within a single research session.
+- **Frontend State**: The React application maintains a stack of generated map objects.
+- **Responsive Grid**: Automatically adjusts layout (1x1, 1x2, or multi-column grid) based on the number of active maps.
+- **Interaction Layer**: Each grid cell provides individual controls for **Focus Mode** (expansion), **Download** (HTML export), and **Removal**.

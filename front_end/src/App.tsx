@@ -3,17 +3,24 @@ import { sendMessage } from './api';
 import type { ChatMessage } from './api';
 import './index.css';
 
+interface MapItem {
+  id: string;
+  url: string;
+  timestamp: number;
+}
+
 function App() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: 'agent',
-    content: 'Hello! I am the HCDP Assistant. I can help map nearby weather stations or generate gridded rainfall maps for Hawaii. How can I assist you today?'
+    content: 'Hello! I am the HCDP Assistant. I can help map weather data for Hawaii. How can I assist you today?'
   }]);
   const [isLoading, setIsLoading] = useState(false);
-  const [mapUrl, setMapUrl] = useState<string | null>(null);
+  const [maps, setMaps] = useState<MapItem[]>([]);
+  const [expandedMapId, setExpandedMapId] = useState<string | null>(null);
+  
   const [sessionId] = useState<string>(() => {
     let sid = localStorage.getItem('hcdp_session_id');
-    // Force a new ID if it's missing OR if it's still the generic "default" from a previous session
     if (!sid || sid === 'default') {
       sid = Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11);
       localStorage.setItem('hcdp_session_id', sid);
@@ -22,7 +29,6 @@ function App() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -38,27 +44,54 @@ function App() {
 
     try {
       const response = await sendMessage(userMessage, sessionId);
-      
-      // The API returns all messages, but we only want to append the new ones that aren't the user message we just added
-      // Or simply replace the entire message history
       setMessages(response.messages);
       
       if (response.map_url) {
-        // use absolute URL based on API base to render iframe correctly
         const HOST = window.location.port === '5173' 
           ? `http://${window.location.hostname}:8000` 
           : `${window.location.protocol}//${window.location.host}/api`;
-        setMapUrl(`${HOST}${response.map_url}?t=${new Date().getTime()}`);
+        
+        const newUrl = `${HOST}${response.map_url}?t=${new Date().getTime()}`;
+        const newMap: MapItem = {
+          id: Math.random().toString(36).substring(7),
+          url: newUrl,
+          timestamp: Date.now()
+        };
+        setMaps(prev => [newMap, ...prev]);
       }
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'agent', 
-        content: `Sorry, I encountered an error communicating with the server.` 
-      }]);
+      setMessages(prev => [...prev, { role: 'agent', content: `Error communicating with server.` }]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const removeMap = (id: string) => {
+    setMaps(prev => prev.filter(m => m.id !== id));
+    if (expandedMapId === id) setExpandedMapId(null);
+  };
+
+  const clearAllMaps = () => {
+    setMaps([]);
+    setExpandedMapId(null);
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedMapId(expandedMapId === id ? null : id);
+  };
+
+  const downloadMap = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    // Extract filename or use timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `hcdp_map_${timestamp}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const expandedMap = maps.find(m => m.id === expandedMapId);
 
   return (
     <div className="app-container">
@@ -77,9 +110,7 @@ function App() {
           ))}
           {isLoading && (
             <div className="typing-indicator">
-              <div className="typing-dot"></div>
-              <div className="typing-dot"></div>
-              <div className="typing-dot"></div>
+              <div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -104,18 +135,40 @@ function App() {
 
       {/* Map Section */}
       <div className="panel map-section">
-        {mapUrl && (
+        <div className="map-header-container">
           <div className="map-header">
-            Interactive Map View
+            {maps.length > 0 ? `Interactive Maps (${maps.length})` : 'Map View'}
           </div>
-        )}
+          {maps.length > 0 && (
+            <button className="clear-maps-btn" onClick={clearAllMaps}>
+              Clear All
+            </button>
+          )}
+        </div>
         
-        {mapUrl ? (
-          <iframe 
-            src={mapUrl} 
-            className="map-frame" 
-            title="Generated Map"
-          />
+        {maps.length > 0 ? (
+          <div className={`map-grid ${maps.length === 1 || expandedMapId ? 'single' : maps.length === 2 ? 'dual' : 'multi'}`}>
+            {/* If a map is expanded, only show that one, otherwise show the grid */}
+            {(expandedMapId && expandedMap ? [expandedMap] : maps).map((map) => (
+              <div key={map.id} className={`map-wrapper ${expandedMapId === map.id ? 'expanded' : ''}`}>
+                <div className="map-label">
+                  Map {maps.length - (maps.indexOf(map))}
+                </div>
+                <div className="map-controls">
+                  <button className="map-btn download-btn" onClick={() => downloadMap(map.url)}>
+                    Download
+                  </button>
+                  <button className="map-btn expand-btn" onClick={() => toggleExpand(map.id)}>
+                    {expandedMapId === map.id ? 'Exit Fullscreen' : 'Expand'}
+                  </button>
+                  <button className="map-btn delete-btn" onClick={() => removeMap(map.id)}>
+                    Remove
+                  </button>
+                </div>
+                <iframe src={map.url} className="map-frame" title={`Map ${map.id}`} />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="map-placeholder">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -123,7 +176,7 @@ function App() {
               <line x1="9" y1="3" x2="9" y2="18"></line>
               <line x1="15" y1="6" x2="15" y2="21"></line>
             </svg>
-            <p>Ask the assistant to generate a map to see it displayed here</p>
+            <p>Ask the assistant to generate maps to see them here</p>
           </div>
         )}
       </div>
