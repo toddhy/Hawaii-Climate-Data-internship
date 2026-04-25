@@ -23,6 +23,7 @@ graph TD
         M["<b>generate_gridded_map</b>"]
         C["<b>generate_climatogram</b>"]
         Q["<b>query_historical_climate_data</b>"]
+        E["<b>query_rainfall_extremes</b>"]
     end
 
     subgraph "⚙️ Backend & Service Layer<br/>"
@@ -49,6 +50,7 @@ graph TD
     Tools --> M
     Tools --> C
     Tools --> Q
+    Tools --> E
 
     %% Flow: Tool -> Logic
     G --> Geo
@@ -56,6 +58,7 @@ graph TD
     M --> Vis
     C --> Grapher
     Q --> TileAPI
+    E --> TileAPI
 
     %% Flow: Logic -> Data
     Finder --> CSV
@@ -88,9 +91,12 @@ graph TD
     class HTML output
 ```
 
-## Data Ingestion & Optimization Flow
+## Data Ingestion & Optimization Flows
 
-The project also includes a specialized workflow for optimizing storage efficiency by converting raw TIFFs into compressed TileDB arrays.
+The project utilizes two distinct workflows for data ingestion depending on the temporal resolution and storage requirements.
+
+### 1. Standard Monthly Ingestion (Legacy)
+Used for monthly variables (Rainfall, Temp, SPI). This flow focuses on optimizing existing large TIFF collections using lossless compression.
 
 ```mermaid
 %%{init: {'theme': 'neutral', 'themeVariables': {'fontSize': '18px', 'fontFamily': 'trebuchet ms', 'primaryTextColor': '#111111', 'lineColor': '#444444', 'subgraphTitleSize': '22px'}}}%%
@@ -98,7 +104,7 @@ graph LR
     Raw["<b>Raw HCDP TIFFs</b>"] --> Opt["<b>compress_tiffs.py</b>"]
     Opt -- "<b>LZW Compression</b>" --> TDB_New[("<b>Optimized TIFFs</b>")]
     TDB_New -- "<b>Ingestion</b>" --> Storage["<b>25 GB → 11 GB Total</b>"]
-    Storage -- "<b>TileDB Slicing</b>" --> Agent["<b>LangChain Agent</b>"]
+    Storage -- "<b>TileDB Slicing</b>" --> Agent["<b>AI Agent</b>"]
 
     classDef source  fill:#B45309,stroke:#7c3700,color:#ffffff,font-weight:bold
     classDef process fill:#5B21B6,stroke:#2e1065,color:#ffffff,font-weight:bold
@@ -109,6 +115,28 @@ graph LR
     class Opt process
     class TDB_New store
     class Storage,Agent output
+```
+
+### 2. High-Resolution Daily Ingestion (New)
+Used for storm-level daily data. This flow bypasses intermediate disk storage entirely by streaming data from the API directly into a quantized 16-bit format.
+
+```mermaid
+%%{init: {'theme': 'neutral', 'themeVariables': {'fontSize': '18px', 'fontFamily': 'trebuchet ms', 'primaryTextColor': '#111111', 'lineColor': '#444444', 'subgraphTitleSize': '22px'}}}%%
+graph LR
+    API["<b>HCDP API</b>"] -- "<b>HTTPS Stream</b>" --> Ingest["<b>ingest_daily_stream.py</b>"]
+    Ingest -- "<b>Memory Preprocessing</b>" --> Quant["<b>Uint16 Quantization</b>"]
+    Quant -- "<b>Atomic Write</b>" --> TDB[("<b>Daily TileDB Array</b>")]
+    TDB -- "<b>Sub-second Query</b>" --> Agent["<b>AI Agent</b>"]
+
+    classDef source  fill:#B45309,stroke:#7c3700,color:#ffffff,font-weight:bold
+    classDef process fill:#5B21B6,stroke:#2e1065,color:#ffffff,font-weight:bold
+    classDef store   fill:#334155,stroke:#0f172a,color:#ffffff,font-weight:bold
+    classDef output  fill:#065F46,stroke:#022c22,color:#ffffff,font-weight:bold
+
+    class API source
+    class Ingest,Quant process
+    class TDB store
+    class Agent output
 ```
 
 ## Climatogram Generation Workflow

@@ -47,6 +47,12 @@ nvm alias default 'lts/*'
 - **Inferred Geolocation**: Understand place names (like "Honolulu") and automatically provide coordinates to data scripts.
 - **Intelligent Defaults**: Automatically applies a **5.0 km radius** and the **current year (2026)** to map requests if not specified.
 
+### Climate Extremes & Daily Data
+- **High-Resolution Daily Baseline**: New support for daily rainfall data (1990–present) enabling storm-level analysis.
+- **Top 1% Analysis (R99P)**: Specialized tools to identify the 99th percentile of rainfall intensity at any coordinate.
+- **Quantized Storage**: Uses 16-bit integer quantization to reduce daily data footprint by ~90%, fitting 34 years of daily maps into < 30GB.
+- **Smart Mapping**: Inferred intent for "extremes" automatically triggers the correct high-resolution data layers.
+
 For a detailed breakdown of the agent's tools and the underlying technical architecture, see [AGENT_TOOLS.md](file:///c:/SCIPE/HCDP-data-for-AI/gemini_chat/AGENT_TOOLS.md).
 
 

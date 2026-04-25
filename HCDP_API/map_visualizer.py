@@ -194,7 +194,7 @@ def process_tiffs(tiff_dir, start_date=None, end_date=None):
     
     return aggregated_data, folium_bounds, meta
 
-def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None):
+def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None, aggregation=None):
     """
     Aggregates data from TileDB and returns data + metadata for overlay.
     """
@@ -208,6 +208,7 @@ def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None):
         
         array_name_map = {
             'rainfall': 'rainfall_array',
+            'daily_rainfall': 'daily_rainfall_optimized',
             'temperature': 'temperature_array',
             'min_temp': 'min_temp_array',
             'max_temp': 'max_temp_array',
@@ -226,7 +227,12 @@ def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None):
     # All mapping currently expects 'mean' (average monthly values)
     # Note: For rainfall this might be 'sum' if aggregating multiple days/months, 
     # but 'mean' is used hereafter for unified range calculation.
-    aggregation = 'sum' if data_type == 'rainfall' else 'mean'
+    if aggregation is None:
+        aggregation = 'sum' if 'rainfall' in data_type.lower() else 'mean'
+    
+    # If the AI or user explicitly asks for 'percentile' mapping
+    if 'percentile' in data_type.lower() or 'top 1%' in data_type.lower():
+        aggregation = 'percentile'
     
     print(f"Processing data from TileDB array: {os.path.basename(array_uri)}...")
     try:
@@ -236,7 +242,7 @@ def process_tiledb(data_type, start_date=None, end_date=None, array_uri=None):
         print(f"Error processing TileDB: {e}")
         return None, None, None
 
-def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None, array_uri=None):
+def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_lat=None, center_lon=None, radius_km=None, omit_json_data=False, add_stations=False, statewide=False, data_type='rainfall', start_date=None, end_date=None, array_uri=None, aggregation=None):
 
 
 
@@ -278,7 +284,7 @@ def create_unified_map(json_path, tiff_dir=None, output_file=OUTPUT_MAP, center_
         stations_with_data = get_station_data(json_path)
 
     # 3. Process Data (TileDB first, then TIFFs)
-    raster_data, raster_bounds, raster_meta = process_tiledb(data_type, start_date, end_date, array_uri)
+    raster_data, raster_bounds, raster_meta = process_tiledb(data_type, start_date, end_date, array_uri, aggregation)
     
     if raster_data is None:
         print("Falling back to TIFF processing...")
@@ -453,9 +459,10 @@ def main():
     
     parser.add_argument("--start_date", help="Start date (YYYY-MM or YYYY-MM-DD)")
     parser.add_argument("--end_date", help="End date (YYYY-MM or YYYY-MM-DD)")
+    parser.add_argument("--aggregation", choices=['sum', 'mean', 'percentile'], help="Aggregation method (sum, mean, percentile)")
     
     args = parser.parse_args()
-    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type, args.start_date, args.end_date, args.array_uri)
+    create_unified_map(args.json, args.tiff_dir, args.output, args.lat, args.lon, args.radius, args.no_json, args.add_stations, args.statewide, args.type, args.start_date, args.end_date, args.array_uri, args.aggregation)
 
 
 

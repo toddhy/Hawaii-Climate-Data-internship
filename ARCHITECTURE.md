@@ -24,7 +24,8 @@ graph TD
     end
     subgraph "🗄️ Data Layer (TileDB)<br/>"
         TDB_Access["<b>TileDB Access</b><br/>(tiledb_access.py)"]
-        Rainfall[("<b>Rainfall</b><br/>Array")]
+        Rainfall[("<b>Monthly Rainfall</b><br/>Array")]
+        DailyRainfall[("<b>Daily Rainfall</b><br/>(Quantized)")]
         Temp[("<b>Temperature</b><br/>Arrays (Mean/Max/Min)")]
         SPI[("<b>SPI</b><br/>Array")]
     end
@@ -40,6 +41,7 @@ graph TD
     Grapher -- "<b>Queries</b>" --> TDB_Access
     Agent -- "<b>Queries</b>" --> TDB_Access
     TDB_Access --> Rainfall
+    TDB_Access --> DailyRainfall
     TDB_Access --> Temp
     TDB_Access --> SPI
     
@@ -60,7 +62,7 @@ graph TD
     class Srv,DB_Sess,Cleanup backend
     class Agent,LLM agent
     class Finder,Mapper,Grapher tools
-    class TDB_Access,Rainfall,Temp,SPI,OutDir,MapHTML data
+    class TDB_Access,Rainfall,DailyRainfall,Temp,SPI,OutDir,MapHTML data
 ```
 
 ## Component Breakdown
@@ -69,4 +71,8 @@ graph TD
 2.  **FastAPI Backend**: Acts as the bridge between the frontend and the AI. It manages conversation sessions, serves generated HTML from a dedicated `outputs/` directory, and orchestrates an automated **Cleanup Manager** to prune stale files.
 3.  **LangChain Agent**: The "brain" of the application. It uses Gemini 3.1 Flash to understand intent and decides which local tools to call (geocoding, data querying, mapping, or climatogram generation).
 4.  **HCDP API Tools**: Specialized Python scripts for coordinate resolution, spatial searches, precision climate data querying, and visual generation (Leaflet/Folium maps and Plotly climatograms).
-5.  **TileDB Data Layer**: A high-performance spatial database storing over 30 years of monthly climate data. It is now optimized with **LZW/Zstd compression**, reducing the footprint from ~25GB to **~11GB** while maintaining sub-second query performance.
+5.  **TileDB Data Layer**: A high-performance spatial database storing over 30 years of climate data. It includes:
+    - **Monthly Variables**: Rainfall, Temperature (Mean/Min/Max), and SPI.
+    - **Daily Variables**: High-resolution rainfall (1990–Present) optimized with **16-bit Integer Quantization**.
+    - **Efficiency**: Total footprint reduced from ~450GB (raw TIFF) to **~36GB** (TileDB) using Zstd compression and unit-scaling.
+6.  **Daily Data Optimization**: To handle the massive volume of daily data (3.5 million pixels per day), rainfall is stored as `uint16` (millimeters * 10). This "No-Disk" ingestion approach bypasses standard TIFF storage by streaming data directly from the HCDP API into memory-resident TileDB buffers.

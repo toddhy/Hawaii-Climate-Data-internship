@@ -1,5 +1,7 @@
 import os
 import sys
+import requests
+import numpy as np
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
@@ -146,8 +148,8 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
         data_type: 'rainfall' or 'temperature' or 'spi' (default: 'rainfall').
         add_stations: Set to True if the user mentions 'stations', 'markers', 'sensors', or 'locations' on the map. (default: False).
         statewide: If True, maps the entire state of Hawaii (ignores radius/center).
-        start_date: Start date for data aggregation (format: YYYY-MM).
-        end_date: End date for data aggregation (format: YYYY-MM).
+        start_date: Start date for data aggregation (format: YYYY-MM or YYYY-MM-DD).
+        end_date: End date for data aggregation (format: YYYY-MM or YYYY-MM-DD).
         use_existing_json: Whether to use 'station_rainfall_data.json' for station markers (default: True).
     """
     if create_unified_map is None:
@@ -163,6 +165,14 @@ def generate_gridded_map(latitude: float = None, longitude: float = None, radius
     if start_date is None and end_date is None:
         start_date = '2026-01'
         end_date = '2026-12'
+
+    # Auto-detect daily precision (YYYY-MM-DD vs YYYY-MM)
+    is_daily = False
+    if start_date and len(start_date.split('-')) == 3:
+        is_daily = True
+    
+    if is_daily and data_type == 'rainfall':
+        data_type = 'daily_rainfall'
 
     try:
         # Use absolute paths for reliability
@@ -338,6 +348,70 @@ def query_historical_timeseries(latitude: float, longitude: float, start_date: s
         return f"Error in regional query: {str(err)}"
 
 @tool
+def query_rainfall_extremes(latitude: float, longitude: float, start_date: str = "1990-01-01", end_date: str = "2023-12-31", percentile: float = 99.0) -> str:
+    """
+    Calculates rainfall extremes (e.g., 'top 1%' or 99th percentile) for a specific coordinate.
+    Analyzes daily intensity to find the threshold for heavy rainfall events.
+    Args:
+        latitude: Latitude coordinate.
+        longitude: Longitude coordinate.
+        start_date: Start date for analysis (YYYY-MM-DD). Default is 1990-01-01.
+        end_date: End date for analysis (YYYY-MM-DD). Default is 2023-12-31.
+        percentile: Percentile to calculate (e.g., 99.0 for 'top 1%').
+    """
+    from database.tiledb_access import get_timeseries_for_region, get_metadata
+    
+    # 1. Try local daily array first (Optimized storage)
+    daily_db_path = os.path.join(PROJECT_ROOT, "database", "daily_rainfall_optimized")
+    if os.path.exists(daily_db_path):
+        try:
+            meta = get_metadata(daily_db_path)
+            a, b, c, d, e, f = meta["transform"]
+            col = int((longitude - c) / a)
+            row = int((latitude - f) / e)
+            
+            # Use get_timeseries_for_region for a 1x1 pixel (single point)
+            series = get_timeseries_for_region(daily_db_path, start_date, end_date, row, row, col, col)
+            if series:
+                values = [v for v in series.values() if v >= 0]
+                if values:
+                    thresh = np.percentile(values, percentile)
+                    return f"The {percentile}th percentile ('top 1%') daily rainfall threshold at ({latitude}, {longitude}) from {start_date} to {end_date} is {thresh:.2f} mm/day. This represents the intensity of the heaviest rainfall events."
+        except Exception as err:
+            print(f"Local daily query failed, falling back to API: {err}")
+            
+    # 2. Fallback to HCDP API for real-time daily calculation
+    token = os.getenv("HCDP_API_TOKEN")
+    if not token:
+        return "Error: No HCDP_API_TOKEN found for remote extremes query."
+        
+    url = "https://api.hcdp.ikewai.org/raster/timeseries"
+    params = {
+        'location': 'hawaii',
+        'start': start_date,
+        'end': end_date,
+        'lat': latitude,
+        'lng': longitude,
+        'datatype': 'rainfall',
+        'extent': 'statewide',
+        'production': 'new',
+        'period': 'day'
+    }
+    headers = {'Authorization': f'Bearer {token}'}
+    
+    try:
+        resp = requests.get(url, params=params, headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            values = [v for v in data.values() if v is not None and v >= 0]
+            if values:
+                thresh = np.percentile(values, percentile)
+                return f"The {percentile}th percentile ('top 1%') daily rainfall threshold at ({latitude}, {longitude}) from {start_date} to {end_date} is {thresh:.2f} mm/day. (Calculated dynamically via HCDP API)."
+        return f"Error fetching daily data from API (Status: {resp.status_code})."
+    except Exception as e:
+        return f"Exception during API query: {str(e)}"
+
+@tool
 def generate_climatogram(latitude: float, longitude: float, start_year: int = None, end_year: int = None, units: str = 'metric', session_id: str = "default") -> str:
     """
     Generates an interactive Climatogram (combined temperature and rainfall seasonal chart) for a location.
@@ -461,6 +535,11 @@ Follow these constraints strictly:
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
 12. For 'generate_climatogram', always ask for a location first if not provided. Metric units are the default.
+13. RAINFALL EXTREMES (Top 1%):
+    - If a user asks for 'top 1%' or 'rainfall extremes', they are referring to the 99th percentile (R99P) of DAILY rainfall intensity.
+    - DO NOT use SPI (Standardized Precipitation Index) as a proxy for 'top 1%' unless specifically asked for anomalies. SPI > 2.0 means 'extremely wet month', not necessarily the heaviest daily events.
+    - For specific locations, use 'query_rainfall_extremes'.
+    - For maps, use 'generate_gridded_map' with data_type='daily_rainfall'.
 """
 
 def normalize_content(content):
@@ -499,7 +578,7 @@ def initialize_agent():
     )
 
     # Bind tools to the LLM
-    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram]
+    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram, query_rainfall_extremes]
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
@@ -534,7 +613,8 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                     "generate_gridded_map": generate_gridded_map,
                     "query_historical_climate_data": query_historical_climate_data,
                     "query_historical_timeseries": query_historical_timeseries,
-                    "generate_climatogram": generate_climatogram
+                    "generate_climatogram": generate_climatogram,
+                    "query_rainfall_extremes": query_rainfall_extremes
                 }
 
                 selected_tool = tool_map[tool_call["name"]]
