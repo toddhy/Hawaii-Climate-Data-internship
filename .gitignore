@@ -38,21 +38,13 @@ node_modules
 pymupdf-venv
 sync.sh
 
-#Large Data Files
-monthly_rainfall
-monthly_temperature
-spi
-monthly_min_temperature
-monthly_max_temperature
-rainfall_array
-temperature_array
-spi_array
-min_temp_array
-max_temp_array
+# Large Data Files
+# TileDB Arrays (Ignore all subdirectories in database folder, but keep scripts)
+database/*/
+!database/*.py
+!database/*.md
 database.7z
 tiff_files.7z
-2026_daily_rainfall
-2026_daily_rainfall
 
 
 
