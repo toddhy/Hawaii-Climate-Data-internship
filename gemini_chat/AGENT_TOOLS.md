@@ -20,6 +20,7 @@ Tools are high-level functions decorated with `@tool` that the LLM is explicitly
 | `generate_climatogram` | Generates a dual-axis Plotly climatogram (Temperature + Rainfall) for a point. | `latitude`, `longitude` |
 | `query_historical_climate_data` | Queries exact historical climate values from the TileDB database for a single month. | `latitude`, `longitude`, `month`, `variable` |
 | `query_historical_timeseries` | Queries the TileDB database for summarized regional climate data over a date range. | `latitude`, `longitude`, `radius_km`, `start_date`, `end_date`, `variable` |
+| `get_database_inventory` | Returns a summary of all available variables and their temporal coverage. | None |
 
 ---
 

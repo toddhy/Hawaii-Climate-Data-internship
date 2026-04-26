@@ -291,6 +291,47 @@ def query_historical_climate_data(latitude: float, longitude: float, month: str,
         return f"Error querying TileDB database: {str(err)}"
 
 @tool
+def get_database_inventory() -> str:
+    """
+    Retrieves a summary of all available climate data arrays in the TileDB database.
+    This includes the variable names (rainfall, temperature, etc.), whether they are daily or monthly, 
+    their temporal range (start/end dates), and total number of time slices.
+    Use this tool when the user asks what data is available, or about the years/months/days covered.
+    """
+    try:
+        from database.db_stats import get_array_stats
+        
+        db_dir = os.path.join(PROJECT_ROOT, "database")
+        arrays = [
+            "rainfall_array",
+            "temperature_array",
+            "max_temp_array",
+            "min_temp_array",
+            "spi_array",
+            "2026_daily_rainfall",
+            "daily_rainfall_optimized"
+        ]
+        
+        inventory = "HCDP TileDB Database Inventory:\n\n"
+        header = f"{'Variable':<25} {'Type':<10} {'Count':<6} {'Start':<12} {'End':<12} {'Resolution':<15}\n"
+        inventory += header + "-" * 80 + "\n"
+        
+        for name in arrays:
+            uri = os.path.join(db_dir, name)
+            if os.path.exists(uri):
+                s = get_array_stats(uri)
+                if "Error" in s:
+                    inventory += f"{name:<25} ERROR: {s['Error']}\n"
+                else:
+                    inventory += f"{s['Name']:<25} {s['Type']:<10} {s['Count']:<6} {s['Start']:<12} {s['End']:<12} {s['Resolution']:<15}\n"
+            else:
+                inventory += f"{name:<25} (Not Found)\n"
+                
+        return inventory
+    except Exception as e:
+        return f"Error retrieving database inventory: {str(e)}"
+
+@tool
 def query_historical_timeseries(latitude: float, longitude: float, start_date: str, end_date: str, radius_km: float = 5.0, variable: str = 'rainfall') -> str:
     """
     Queries the high-performance TileDB database for a summarized time-series of climate data over a date range.
@@ -505,8 +546,6 @@ Follow these constraints strictly:
 10. If statewide is False, radius_km must be at least 1.0 (default 5.0).
 11. When a user asks for a map and mentions 'stations', 'markers', 'sites', or 'sensors', you MUST set add_stations=True in the generate_gridded_map tool.
 12. For 'generate_climatogram', always ask for a location first if not provided. Metric units are the default.
-<<<<<<< HEAD
-=======
 13. RAINFALL EXTREMES (Top 1%):
     - If a user asks for 'top 1%' or 'rainfall extremes', they are referring to the 99th percentile (R99P) of DAILY rainfall intensity.
     - DO NOT use SPI (Standardized Precipitation Index) as a proxy for 'top 1%' unless specifically asked for anomalies. SPI > 2.0 means 'extremely wet month', not necessarily the heaviest daily events.
@@ -514,7 +553,6 @@ Follow these constraints strictly:
     - For maps, use 'generate_gridded_map' with data_type='daily_rainfall'.
 14. DUAL MAPS:
     - Use 'generate_dual_map' when the user wants to COMPARE two time periods or two variables side-by-side.
->>>>>>> 72fd7e0 (Add ability to interact with multiple generated maps. Can expand or download chosen maps.)
 """
 
 def normalize_content(content):
@@ -553,7 +591,7 @@ def initialize_agent():
     )
 
     # Bind tools to the LLM
-    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, generate_dual_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram]
+    tools = [geocode_placename, find_nearby_stations, map_nearby_stations, generate_gridded_map, generate_dual_map, query_historical_climate_data, query_historical_timeseries, generate_climatogram, get_database_inventory]
     llm_with_tools = llm.bind_tools(tools)
     print("[*] Agent initialized with tools.")
 
@@ -589,7 +627,8 @@ def chat_with_agent(user_input: str, messages: list, session_id: str = "default"
                     "generate_dual_map": generate_dual_map,
                     "query_historical_climate_data": query_historical_climate_data,
                     "query_historical_timeseries": query_historical_timeseries,
-                    "generate_climatogram": generate_climatogram
+                    "generate_climatogram": generate_climatogram,
+                    "get_database_inventory": get_database_inventory
                 }
 
                 selected_tool = tool_map[tool_call["name"]]
@@ -674,7 +713,8 @@ def run_agent():
                         "generate_dual_map": generate_dual_map,
                         "query_historical_climate_data": query_historical_climate_data,
                         "query_historical_timeseries": query_historical_timeseries,
-                        "generate_climatogram": generate_climatogram
+                        "generate_climatogram": generate_climatogram,
+                        "get_database_inventory": get_database_inventory
                     }
 
                     selected_tool = tool_map[tool_call["name"]]

@@ -12,6 +12,7 @@ This directory contains the high-performance storage layer for the HCDP AI works
 - **`tiledb_ingest.py`**: Utility to ingest raw TIFF files (Rainfall/Temp) from `HCDP_API/` into TileDB arrays.
 - **`ingest_spi.py`**: Utility specifically for ingesting SPI data.
 - **`optimize_storage.py`**: Utility to migrate/re-ingest data with high-level Zstd compression (Level 7) for maximum disk efficiency.
+- **`db_stats.py`**: Utility to retrieve and display statistics (range, count, resolution) for all arrays in the database.
 - `tiledb_access.py`: Library functions for querying the arrays from other scripts.
 - `DATA_DISCREPANCY.md`: Important information explaining why gridded TileDB data may differ from raw station observations.
 
@@ -45,6 +46,12 @@ grid = get_data_for_month("database/rainfall_array", "1995-05")
 
 # Get a time-series for a specific pixel
 history = get_timeseries_for_pixel("database/rainfall_array", y_idx, x_idx)
+```
+
+### Viewing Database Statistics
+To see a summary of all stored years, months, and variables:
+```powershell
+python database/db_stats.py
 ```
 
 ---
