@@ -714,8 +714,7 @@ def run_agent():
                         "query_historical_climate_data": query_historical_climate_data,
                         "query_historical_timeseries": query_historical_timeseries,
                         "generate_climatogram": generate_climatogram,
-                        "get_database_inventory": get_database_inventory
-                    }
+                        "get_database_inventory": get_database_inventory                    }
 
                     selected_tool = tool_map[tool_call["name"]]
                     
